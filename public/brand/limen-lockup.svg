@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <!-- Horizontal lockup: icon + "LIMEN" wordmark — no regional tagline -->
+  <!-- Icon -->
+  <rect x="20" y="20" width="160" height="160" rx="28" fill="#00D9A3"/>
+  <path d="M62 50 V160 H142"
+        stroke="white" stroke-width="17" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Wordmark -->
+  <text x="210" y="130" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="80" font-weight="800" letter-spacing="-2" fill="#111827">
+    LIMEN
+  </text>
+  <!-- Tagline — platform-level, not regional -->
+  <text x="212" y="158" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="18" font-weight="500" letter-spacing="0.5" fill="#9CA3AF">
+    Dati civici aperti
+  </text>
+</svg>

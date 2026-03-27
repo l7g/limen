@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Limen — Open Civic Data Platform
 
-## Getting Started
+> Italian open data, made visible.
 
-First, run the development server:
+**Limen** is an open-source civic data platform that makes Italian public data explorable through maps and visualizations. Boundaries, demographics, transit, vehicles, emissions — all in an interactive browser-based workbench.
+
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **No backend** — all data is static files served from `/public/data/`
+- **Client-side processing** — CSV/GeoJSON/SHP parsed in the browser
+- **MapLibre GL JS** — vector-based map rendering
+- **Zustand** — lightweight state management for the workbench
+- **Three-tier data**: API-fed (auto-updated) → Curated static (expiry alerts) → Computed/derived
 
-## Learn More
+## Data Pipeline
 
-To learn more about Next.js, take a look at the following resources:
+Raw data lives in `../DATA/` (shared workspace). Scripts in `scripts/` transform raw data into optimized formats:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx tsx scripts/fetch-boundaries.ts    # ISTAT boundaries → GeoJSON
+npx tsx scripts/fetch-population.ts    # ISTAT population → CSV
+npx tsx scripts/fetch-gtfs.ts          # GTFS feeds → stops/routes GeoJSON
+npx tsx scripts/check-freshness.ts     # Check all dataset statuses
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Pages
 
-## Deploy on Vercel
+| Route        | Purpose                                  |
+| ------------ | ---------------------------------------- |
+| `/`          | Landing page                             |
+| `/workbench` | Split-panel map workbench                |
+| `/dati`      | Data catalog with freshness badges       |
+| `/dati/[id]` | Dataset detail page                      |
+| `/info`      | About the project                        |
+| `/admin`     | Freshness dashboard (password-protected) |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js · React · TypeScript · Tailwind CSS v4 · MapLibre GL JS · Zustand · Papa Parse
+
+## License
+
+Code: MIT. Derived data: CC BY 4.0.

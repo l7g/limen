@@ -15,7 +15,7 @@ export const datasets: DatasetMeta[] = [
     sourceUrl:
       "https://www.istat.it/notizia/confini-delle-unita-amministrative-a-fini-statistici/",
     description:
-      "Confini amministrativi di tutti i comuni italiani, versione generalizzata.",
+      "Poligoni dei 7.904 comuni italiani (versione generalizzata). Contiene codice ISTAT (PRO_COM_T), nome, provincia, regione, superficie e popolazione legale. Base per qualsiasi analisi a scala comunale — unibile con popolazione, redditi, veicoli e altri dataset tramite PRO_COM_T.",
     cadence: "annual",
     lastUpdated: "2025-01-01",
     nextExpectedUpdate: "2026-01-01",
@@ -30,6 +30,11 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/boundaries/comuni.geojson",
     geometryType: "polygon",
     joinField: "PRO_COM_T",
+    scale: "comunale",
+    isBoundary: true,
+    acquisitionMethod: "download",
+    group: "confini",
+    groupLabel: "Confini Amministrativi",
   },
   {
     id: "istat-boundaries-province",
@@ -38,7 +43,8 @@ export const datasets: DatasetMeta[] = [
     source: "ISTAT",
     sourceUrl:
       "https://www.istat.it/notizia/confini-delle-unita-amministrative-a-fini-statistici/",
-    description: "Confini amministrativi di tutte le province italiane.",
+    description:
+      "Poligoni delle 107 province/città metropolitane italiane. Contiene codice provincia (COD_PROV), nome, sigla automobilistica, regione e tipo (provincia o città metropolitana). Unibile con dati ACI veicoli e altri indicatori provinciali tramite COD_PROV.",
     cadence: "annual",
     lastUpdated: "2025-01-01",
     nextExpectedUpdate: "2026-01-01",
@@ -53,6 +59,10 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/boundaries/province.geojson",
     geometryType: "polygon",
     joinField: "COD_PROV",
+    scale: "provinciale",
+    isBoundary: true,
+    acquisitionMethod: "download",
+    group: "confini",
   },
   {
     id: "istat-boundaries-regioni",
@@ -61,7 +71,8 @@ export const datasets: DatasetMeta[] = [
     source: "ISTAT",
     sourceUrl:
       "https://www.istat.it/notizia/confini-delle-unita-amministrative-a-fini-statistici/",
-    description: "Confini amministrativi di tutte le regioni italiane.",
+    description:
+      "Poligoni delle 20 regioni italiane. Contiene codice regione (COD_REG), nome, ripartizione geografica e superficie. Utile come base cartografica per visualizzazioni a scala regionale.",
     cadence: "annual",
     lastUpdated: "2025-01-01",
     nextExpectedUpdate: "2026-01-01",
@@ -76,6 +87,10 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/boundaries/regioni.geojson",
     geometryType: "polygon",
     joinField: "COD_REG",
+    scale: "regionale",
+    isBoundary: true,
+    acquisitionMethod: "download",
+    group: "confini",
   },
   {
     id: "istat-population",
@@ -83,11 +98,12 @@ export const datasets: DatasetMeta[] = [
     tier: 1,
     source: "ISTAT",
     sourceUrl: "https://esploradati.istat.it/databrowser/",
-    description: "Popolazione residente per comune, ultimo anno disponibile.",
+    description:
+      "Popolazione residente al 1° gennaio 2025 per tutti i 7.896 comuni italiani (fonte SDMX ISTAT, dataflow DCIS_POPRES1). Popolazione totale nazionale: 58.943.464 abitanti. Colonne: codice ISTAT a 6 cifre, anno, popolazione totale. Unibile con confini comunali e altri dataset tramite PRO_COM_T per calcolare indicatori pro-capite (motorizzazione, reddito, densità).",
     cadence: "annual",
-    lastUpdated: "2025-09-01",
-    nextExpectedUpdate: "2026-09-01",
-    expectedPublishMonth: 9,
+    lastUpdated: "2026-03-28",
+    nextExpectedUpdate: "2027-03-01",
+    expectedPublishMonth: 1,
     expiryWarningDays: 60,
     status: "current",
     coverage: "italy",
@@ -98,6 +114,8 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/population/comuni-population.csv",
     geometryType: "none",
     joinField: "PRO_COM_T",
+    scale: "comunale",
+    acquisitionMethod: "api",
   },
   {
     id: "gtfs-arst",
@@ -106,9 +124,9 @@ export const datasets: DatasetMeta[] = [
     source: "ARST",
     sourceUrl: "https://www.arst.sardegna.it/",
     description:
-      "Feed GTFS del servizio bus regionale ARST in tutta la Sardegna.",
+      "Feed GTFS del servizio bus regionale ARST — il principale operatore extraurbano della Sardegna. Copre l'intera rete di autolinee che collega comuni rurali e centri urbani. Contiene fermate geolocalizzate, orari, percorsi e frequenze.",
     cadence: "quarterly",
-    lastUpdated: "2025-01-15",
+    lastUpdated: "2026-01-23",
     expiryWarningDays: 14,
     status: "current",
     coverage: "sardinia",
@@ -118,6 +136,9 @@ export const datasets: DatasetMeta[] = [
     fetchScript: "scripts/fetch-gtfs.ts",
     filePath: "public/data/transit/arst-stops.geojson",
     geometryType: "point",
+    acquisitionMethod: "download",
+    group: "gtfs-sardegna",
+    groupLabel: "Trasporto Pubblico Sardegna (GTFS)",
   },
   {
     id: "gtfs-ctm",
@@ -126,9 +147,9 @@ export const datasets: DatasetMeta[] = [
     source: "CTM",
     sourceUrl: "https://www.ctmcagliari.it/",
     description:
-      "Feed GTFS del servizio bus urbano CTM nell'area metropolitana di Cagliari.",
+      "Feed GTFS del servizio bus urbano CTM — l'operatore del trasporto pubblico nell'area metropolitana di Cagliari. Copre le linee urbane e suburbane della città metropolitana. Contiene fermate, orari, percorsi e frequenze.",
     cadence: "quarterly",
-    lastUpdated: "2025-01-15",
+    lastUpdated: "2026-01-23",
     expiryWarningDays: 14,
     status: "current",
     coverage: "sardinia",
@@ -138,6 +159,8 @@ export const datasets: DatasetMeta[] = [
     fetchScript: "scripts/fetch-gtfs.ts",
     filePath: "public/data/transit/ctm-stops.geojson",
     geometryType: "point",
+    acquisitionMethod: "download",
+    group: "gtfs-sardegna",
   },
   {
     id: "gtfs-atp-sassari",
@@ -145,9 +168,10 @@ export const datasets: DatasetMeta[] = [
     tier: 1,
     source: "ATP Sassari",
     sourceUrl: "https://www.atpsassari.it/",
-    description: "Feed GTFS del servizio bus ATP a Sassari.",
+    description:
+      "Feed GTFS del servizio bus ATP — trasporto urbano di Sassari e aree limitrofe. Contiene fermate geolocalizzate, orari e percorsi.",
     cadence: "quarterly",
-    lastUpdated: "2025-01-15",
+    lastUpdated: "2026-01-23",
     expiryWarningDays: 14,
     status: "current",
     coverage: "sardinia",
@@ -157,6 +181,8 @@ export const datasets: DatasetMeta[] = [
     fetchScript: "scripts/fetch-gtfs.ts",
     filePath: "public/data/transit/atp-sassari-stops.geojson",
     geometryType: "point",
+    acquisitionMethod: "download",
+    group: "gtfs-sardegna",
   },
   {
     id: "gtfs-atp-nuoro",
@@ -164,9 +190,10 @@ export const datasets: DatasetMeta[] = [
     tier: 1,
     source: "ATP Nuoro",
     sourceUrl: "",
-    description: "Feed GTFS del servizio bus ATP a Nuoro.",
+    description:
+      "Feed GTFS del servizio bus ATP Nuoro — trasporto urbano di Nuoro. Contiene fermate geolocalizzate, orari e percorsi.",
     cadence: "quarterly",
-    lastUpdated: "2025-01-15",
+    lastUpdated: "2026-01-23",
     expiryWarningDays: 14,
     status: "current",
     coverage: "sardinia",
@@ -176,6 +203,8 @@ export const datasets: DatasetMeta[] = [
     fetchScript: "scripts/fetch-gtfs.ts",
     filePath: "public/data/transit/atp-nuoro-stops.geojson",
     geometryType: "point",
+    acquisitionMethod: "download",
+    group: "gtfs-sardegna",
   },
   {
     id: "gtfs-aspo",
@@ -183,9 +212,10 @@ export const datasets: DatasetMeta[] = [
     tier: 1,
     source: "ASPO",
     sourceUrl: "",
-    description: "Feed GTFS del servizio bus ASPO a Olbia.",
+    description:
+      "Feed GTFS del servizio bus ASPO — trasporto urbano di Olbia e Golfo Aranci. Contiene fermate geolocalizzate, orari e percorsi.",
     cadence: "quarterly",
-    lastUpdated: "2025-01-15",
+    lastUpdated: "2026-01-23",
     expiryWarningDays: 14,
     status: "current",
     coverage: "sardinia",
@@ -195,6 +225,8 @@ export const datasets: DatasetMeta[] = [
     fetchScript: "scripts/fetch-gtfs.ts",
     filePath: "public/data/transit/aspo-stops.geojson",
     geometryType: "point",
+    acquisitionMethod: "download",
+    group: "gtfs-sardegna",
   },
   {
     id: "gtfs-trenitalia",
@@ -202,9 +234,10 @@ export const datasets: DatasetMeta[] = [
     tier: 1,
     source: "Trenitalia",
     sourceUrl: "https://www.trenitalia.com/",
-    description: "Feed GTFS del servizio ferroviario Trenitalia in Sardegna.",
+    description:
+      "Feed GTFS del servizio ferroviario Trenitalia in Sardegna — la rete su ferro che collega Cagliari, Sassari, Olbia e Oristano. Contiene stazioni, orari e linee ferroviarie.",
     cadence: "quarterly",
-    lastUpdated: "2025-01-15",
+    lastUpdated: "2026-01-23",
     expiryWarningDays: 14,
     status: "current",
     coverage: "sardinia",
@@ -214,6 +247,8 @@ export const datasets: DatasetMeta[] = [
     fetchScript: "scripts/fetch-gtfs.ts",
     filePath: "public/data/transit/trenitalia-stops.geojson",
     geometryType: "point",
+    acquisitionMethod: "download",
+    group: "gtfs-sardegna",
   },
   {
     id: "aci-vehicles",
@@ -223,10 +258,10 @@ export const datasets: DatasetMeta[] = [
     sourceUrl:
       "https://www.aci.it/laci/studi-e-ricerche/dati-e-statistiche/open-data.html",
     description:
-      "Parco veicolare per provincia, classe Euro e alimentazione. 2015–2024.",
+      "Consistenza del parco veicolare per le 107 province italiane, disaggregato per categoria: autovetture, autocarri, motocicli, autobus, autoveicoli speciali, motocarri, rimorchi e trattori. Fonte ACI Autoritratto 2024 (Open Data). 55,6 milioni di veicoli totali, di cui 41,3 milioni di autovetture. Unibile con confini provinciali (COD_PROV) e popolazione per calcolare il tasso di motorizzazione.",
     cadence: "annual",
-    lastUpdated: "2024-06-01",
-    nextExpectedUpdate: "2025-06-01",
+    lastUpdated: "2026-03-28",
+    nextExpectedUpdate: "2027-06-01",
     expectedPublishMonth: 6,
     expiryWarningDays: 60,
     status: "current",
@@ -237,6 +272,8 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/vehicles/fleet-by-province.csv",
     geometryType: "none",
     joinField: "COD_PROV",
+    scale: "provinciale",
+    acquisitionMethod: "download",
   },
 
   // ── Tier 2: Curated Static ───────────────────────────────────────
@@ -248,7 +285,7 @@ export const datasets: DatasetMeta[] = [
     sourceUrl:
       "https://www.istat.it/statistiche/censimento-permanente/censimento-popolazione/pendolarismo/",
     description:
-      "Matrice origine-destinazione dei pendolari dal censimento 2021.",
+      "Matrice origine-destinazione degli spostamenti quotidiani per studio e lavoro (Censimento permanente 2021). Contiene 524.000 flussi con comune di partenza, comune di arrivo, mezzo di trasporto e motivo. Unibile con confini comunali per visualizzare i corridoi di mobilità e identificare poli attrattori.",
     cadence: "decennial",
     lastUpdated: "2023-12-01",
     expiryWarningDays: 365,
@@ -260,38 +297,23 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/population/pendolarismo.csv",
     geometryType: "none",
     joinField: "PRO_COM_T",
+    scale: "comunale",
+    acquisitionMethod: "download",
   },
-  {
-    id: "ispra-emission-factors",
-    name: "Fattori di Emissione",
-    tier: 2,
-    source: "ISPRA",
-    sourceUrl: "https://www.isprambiente.gov.it/",
-    description:
-      "Fattori di emissione nazionali per categoria veicolare e classe Euro.",
-    cadence: "annual",
-    lastUpdated: "2024-04-01",
-    nextExpectedUpdate: "2025-04-01",
-    expectedPublishMonth: 4,
-    expiryWarningDays: 60,
-    status: "current",
-    coverage: "italy",
-    format: "csv",
-    category: "ambiente",
-    license: "Open Data",
-    filePath: "public/data/emissions/emission-factors.csv",
-    geometryType: "none",
-  },
+  // ISPRA emission factors: raw data exists (DATA/EMISSIONS/ISPRAMBIENTE/fe.xlsx)
+  // Re-add when processing script is written.
+
   {
     id: "mef-income",
     name: "Redditi per Comune",
     tier: 2,
     source: "MEF",
     sourceUrl: "https://www.finanze.gov.it/",
-    description: "Reddito medio dichiarato per comune.",
+    description:
+      "Redditi IRPEF per comune dalle dichiarazioni fiscali 2023 (fonte MEF — Dipartimento delle Finanze). Copre 7.896 comuni italiani con numero di contribuenti, reddito complessivo, imponibile, imposta netta e reddito medio (media nazionale €21.431). Unibile con confini comunali tramite PRO_COM_T per mappe della ricchezza e disparità territoriale.",
     cadence: "annual",
-    lastUpdated: "2024-04-01",
-    nextExpectedUpdate: "2025-04-01",
+    lastUpdated: "2026-03-28",
+    nextExpectedUpdate: "2027-04-01",
     expectedPublishMonth: 4,
     expiryWarningDays: 60,
     status: "current",
@@ -302,49 +324,14 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/population/income-by-comune.csv",
     geometryType: "none",
     joinField: "PRO_COM_T",
+    scale: "comunale",
+    acquisitionMethod: "download",
   },
-  {
-    id: "miur-schools",
-    name: "Scuole — Localizzazione",
-    tier: 2,
-    source: "MIUR",
-    sourceUrl: "https://dati.istruzione.it/",
-    description:
-      "Localizzazione di tutte le scuole italiane per tipo e livello.",
-    cadence: "annual",
-    lastUpdated: "2024-09-01",
-    nextExpectedUpdate: "2025-09-01",
-    expectedPublishMonth: 9,
-    expiryWarningDays: 60,
-    status: "current",
-    coverage: "italy",
-    format: "csv",
-    category: "servizi",
-    license: "Open Data",
-    filePath: "public/data/derived/schools.geojson",
-    geometryType: "point",
-  },
+  // MIUR schools: no raw data downloaded yet. Re-add when sourced.
 
   // ── Tier 3: Computed / Derived ───────────────────────────────────
-  {
-    id: "derived-ptal",
-    name: "PTAL — Accessibilità Trasporto Pubblico",
-    tier: 3,
-    source: "Limen (calcolato)",
-    sourceUrl: "",
-    description:
-      "Indice di accessibilità del trasporto pubblico, calcolato da GTFS + confini.",
-    cadence: "quarterly",
-    lastUpdated: "2025-01-20",
-    expiryWarningDays: 30,
-    status: "current",
-    coverage: "sardinia",
-    format: "geojson",
-    category: "indicatori",
-    license: "CC BY 4.0",
-    filePath: "public/data/derived/ptal-sardinia.geojson",
-    geometryType: "polygon",
-  },
+  // PTAL: requires complex GTFS frequency analysis. Re-add when compute-ptal.ts is written.
+
   {
     id: "derived-motorization",
     name: "Tasso di Motorizzazione",
@@ -352,9 +339,9 @@ export const datasets: DatasetMeta[] = [
     source: "Limen (calcolato)",
     sourceUrl: "",
     description:
-      "Veicoli per 1000 abitanti per provincia, calcolato da ACI + ISTAT.",
+      "Numero di veicoli per 1.000 abitanti per provincia italiana — calcolato incrociando il parco veicolare ACI 2024 (55,6M veicoli) con la popolazione ISTAT 2025 (58,9M abitanti). Media nazionale: 982 veicoli/1.000 ab. Range: Milano (763) — Aosta (2.642). Include anche rapporto sole autovetture per 1.000 abitanti. Unibile con confini provinciali (COD_PROV) per mappe choropleth.",
     cadence: "annual",
-    lastUpdated: "2024-09-01",
+    lastUpdated: "2026-03-28",
     expiryWarningDays: 60,
     status: "current",
     coverage: "italy",
@@ -364,6 +351,8 @@ export const datasets: DatasetMeta[] = [
     filePath: "public/data/derived/motorization-rate.csv",
     geometryType: "none",
     joinField: "COD_PROV",
+    scale: "provinciale",
+    acquisitionMethod: "derived",
   },
 ];
 
@@ -382,4 +371,41 @@ export function getDatasetsByCoverage(
   coverage: DatasetMeta["coverage"],
 ): DatasetMeta[] {
   return datasets.filter((d) => d.coverage === coverage);
+}
+
+/** Find datasets that share a joinField with the given dataset (merge candidates). */
+export function getRelatedDatasets(id: string): DatasetMeta[] {
+  const dataset = getDataset(id);
+  if (!dataset?.joinField) return [];
+  return datasets.filter(
+    (d) => d.id !== id && d.joinField === dataset.joinField,
+  );
+}
+
+/**
+ * Get catalog entries for display: one entry per ungrouped dataset,
+ * one entry per group (uses the member with groupLabel as representative).
+ */
+export function getCatalogDisplayEntries(): DatasetMeta[] {
+  const seen = new Set<string>();
+  const result: DatasetMeta[] = [];
+
+  for (const d of datasets) {
+    if (!d.group) {
+      result.push(d);
+    } else if (!seen.has(d.group)) {
+      seen.add(d.group);
+      // Prefer the member with groupLabel set as the representative
+      const representative =
+        datasets.find((m) => m.group === d.group && m.groupLabel) ?? d;
+      result.push(representative);
+    }
+  }
+
+  return result;
+}
+
+/** Get all members of a dataset group. */
+export function getGroupMembers(group: string): DatasetMeta[] {
+  return datasets.filter((d) => d.group === group);
 }

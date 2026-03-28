@@ -32,7 +32,10 @@ export default function DatasetPreviews({
   geometryType,
 }: Props) {
   const showMap =
-    geometryType && geometryType !== "none" && format === "geojson" && dataUrl;
+    geometryType &&
+    geometryType !== "none" &&
+    (format === "geojson" || format === "gtfs") &&
+    dataUrl;
 
   return (
     <>

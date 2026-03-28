@@ -1,6 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Map } from "lucide-react";
-import { datasets, getDataset } from "@/lib/datasets/catalog";
+import type { Metadata } from "next";
+import { ArrowLeft, Download, ExternalLink, Link2, Map } from "lucide-react";
+import {
+  datasets,
+  getDataset,
+  getRelatedDatasets,
+} from "@/lib/datasets/catalog";
 import {
   computeStatus,
   daysSinceUpdate,
@@ -16,6 +21,30 @@ export function generateStaticParams() {
   return datasets.map((d) => ({ datasetId: d.id }));
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ datasetId: string }>;
+}): Promise<Metadata> {
+  const { datasetId } = await params;
+  const dataset = getDataset(datasetId);
+  if (!dataset) return { title: "Dataset non trovato — Limen" };
+
+  const title = `${dataset.name} — Limen`;
+  const description = `${dataset.description} Fonte: ${dataset.source}. Copertura: ${dataset.coverage === "italy" ? "Italia" : "Sardegna"}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      siteName: "Limen",
+    },
+  };
+}
+
 const tierLabels = {
   1: "Automatico (API)",
   2: "Manuale (Statico)",
@@ -26,6 +55,15 @@ const coverageLabels = {
   sardinia: "Sardegna",
   custom: "Custom",
 } as const;
+const cadenceLabels: Record<string, string> = {
+  daily: "Giornaliera",
+  weekly: "Settimanale",
+  monthly: "Mensile",
+  quarterly: "Trimestrale",
+  annual: "Annuale",
+  decennial: "Decennale",
+  static: "Statico",
+};
 const categoryLabels: Record<string, string> = {
   confini: "Confini Amministrativi",
   demografia: "Demografia",
@@ -49,6 +87,7 @@ export default async function DatasetDetailPage({
   const status = computeStatus(dataset);
   const age = daysSinceUpdate(dataset);
   const untilNext = daysUntilUpdate(dataset);
+  const related = getRelatedDatasets(datasetId);
 
   /** Convert filesystem path "public/data/..." → URL "/data/..." */
   const dataUrl = dataset.filePath.startsWith("public/")
@@ -64,7 +103,10 @@ export default async function DatasetDetailPage({
     { label: "Copertura", value: coverageLabels[dataset.coverage] },
     { label: "Formato", value: dataset.format.toUpperCase() },
     { label: "Licenza", value: dataset.license },
-    { label: "Cadenza", value: dataset.cadence },
+    {
+      label: "Cadenza",
+      value: cadenceLabels[dataset.cadence] ?? dataset.cadence,
+    },
     { label: "Aggiornamento", value: tierLabels[dataset.tier] },
     { label: "Ultimo aggiornamento", value: `${age} giorni fa` },
     ...(untilNext !== null
@@ -131,6 +173,14 @@ export default async function DatasetDetailPage({
               Apri nel Workbench
             </Link>
           )}
+          <a
+            href={dataUrl}
+            download
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-[13px] font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            <Download className="h-4 w-4" />
+            Scarica {dataset.format.toUpperCase()}
+          </a>
           {dataset.sourceUrl && (
             <a
               href={dataset.sourceUrl}
@@ -150,6 +200,48 @@ export default async function DatasetDetailPage({
           format={dataset.format}
           geometryType={dataset.geometryType}
         />
+
+        {/* Related datasets (shared join key) */}
+        {related.length > 0 && (
+          <div className="mt-10">
+            <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-gray-400 mb-4">
+              <Link2 className="h-4 w-4" /> Dataset Collegati
+              <span className="text-[11px] font-normal normal-case tracking-normal text-gray-400">
+                — unibili tramite{" "}
+                <code className="font-mono text-[11px] text-gray-500">
+                  {dataset.joinField}
+                </code>
+              </span>
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {related.map((rel) => {
+                const relStatus = computeStatus(rel);
+                return (
+                  <Link
+                    key={rel.id}
+                    href={`/dati/${rel.id}`}
+                    className="group flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-gray-300 hover:shadow-sm"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-gray-900 group-hover:text-[#00B386] transition-colors truncate">
+                        {rel.name}
+                      </p>
+                      <p className="mt-1 text-[12px] text-gray-500 line-clamp-2">
+                        {rel.description}
+                      </p>
+                      <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
+                        <span>{rel.source}</span>
+                        <span>·</span>
+                        <span>{rel.format.toUpperCase()}</span>
+                      </div>
+                    </div>
+                    <FreshnessBadge status={relStatus} className="shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

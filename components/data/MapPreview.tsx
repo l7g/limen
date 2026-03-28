@@ -1,10 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Map, Source, Layer, NavigationControl } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { FeatureCollection } from "geojson";
 
 const BASEMAP_STYLE =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+
+const EMPTY_FC: FeatureCollection = { type: "FeatureCollection", features: [] };
 
 interface MapPreviewProps {
   /** URL to a GeoJSON file in /public/data/ */
@@ -13,6 +17,37 @@ interface MapPreviewProps {
 }
 
 export default function MapPreview({ dataUrl, geometryType }: MapPreviewProps) {
+  const [geojson, setGeojson] = useState<FeatureCollection | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setGeojson(null);
+    setError(false);
+    fetch(dataUrl)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled) setGeojson(data as FeatureCollection);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dataUrl]);
+
+  if (error) {
+    return (
+      <div className="flex h-64 w-full items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-[13px] text-gray-400">
+        Mappa non disponibile
+      </div>
+    );
+  }
+
   const layerType =
     geometryType === "polygon"
       ? "fill"
@@ -30,7 +65,7 @@ export default function MapPreview({ dataUrl, geometryType }: MapPreviewProps) {
         interactive={false}
       >
         <NavigationControl position="top-right" showCompass={false} />
-        <Source id="preview" type="geojson" data={dataUrl}>
+        <Source id="preview" type="geojson" data={geojson ?? EMPTY_FC}>
           {layerType === "fill" && (
             <Layer
               id="preview-fill"

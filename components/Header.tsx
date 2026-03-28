@@ -43,7 +43,7 @@ export default function Header() {
             </Link>
           ))}
           <a
-            href="https://github.com/l7g/limen"
+            href="https://github.com/laurentmusic/limen"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-400 hover:text-gray-700 transition-colors ml-1"

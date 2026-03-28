@@ -20,6 +20,16 @@ export interface DatasetMeta {
   filePath: string;
   geometryType?: GeometryType;
   joinField?: string;
+  /** Geographic aggregation level of data rows. */
+  scale?: DatasetScale;
+  /** True for boundary/geometry datasets — not data to be merged, but geographic base layers. */
+  isBoundary?: boolean;
+  /** How the raw data was obtained. */
+  acquisitionMethod?: DatasetAcquisitionMethod;
+  /** Group ID for collection display (e.g. "confini", "gtfs-sardegna"). Datasets sharing a group appear as one row in the catalog, with drill-down to individual members. */
+  group?: string;
+  /** Display label for the group — set only on one member per group. */
+  groupLabel?: string;
 }
 
 export type DatasetCadence =
@@ -54,6 +64,12 @@ export type DatasetCategory =
   | "indicatori";
 
 export type GeometryType = "point" | "line" | "polygon" | "none";
+
+/** Geographic aggregation level of a dataset's rows. */
+export type DatasetScale = "comunale" | "provinciale" | "regionale" | "none";
+
+/** How raw data was obtained. */
+export type DatasetAcquisitionMethod = "api" | "download" | "derived";
 
 /** Configuration for a single map layer in the workbench. */
 export interface LayerConfig {

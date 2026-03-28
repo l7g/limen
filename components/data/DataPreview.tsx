@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Papa from "papaparse";
 
 interface DataPreviewProps {
   /** URL to a GeoJSON or CSV file in /public/data/ */
@@ -29,9 +30,16 @@ export default function DataPreview({
     async function load() {
       try {
         const res = await fetch(dataUrl);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (res.status === 404) {
+          if (!cancelled)
+            setError(
+              "Dati non ancora disponibili. Questo dataset sarà aggiunto prossimamente.",
+            );
+          return;
+        }
+        if (!res.ok) throw new Error(`Errore di caricamento (${res.status})`);
 
-        if (format === "geojson") {
+        if (format === "geojson" || format === "gtfs") {
           const geojson = await res.json();
           const features = geojson.features ?? [];
           setTotalCount(features.length);
@@ -46,8 +54,25 @@ export default function DataPreview({
             setColumns(Object.keys(sample[0]));
           }
           if (!cancelled) setRows(sample);
+        } else if (format === "csv") {
+          const text = await res.text();
+          const result = Papa.parse<Row>(text, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true,
+            preview: maxRows,
+          });
+          if (!cancelled) {
+            const previewRows = result.data;
+            // preview option limits parsing — estimate total from line count
+            const lineCount = text.split("\n").length - 1;
+            setTotalCount(lineCount);
+            if (previewRows.length > 0) {
+              setColumns(Object.keys(previewRows[0]));
+            }
+            setRows(previewRows);
+          }
         } else {
-          // For CSV/other formats, just show a "not supported yet" message
           if (!cancelled)
             setError("Anteprima non disponibile per questo formato.");
         }

@@ -6,10 +6,9 @@ import Footer from "@/components/Footer";
 
 export default function Home() {
   const totalDatasets = datasets.length;
-  const sardinia = datasets.filter((d) => d.coverage === "sardinia").length;
-  const italy = datasets.filter((d) => d.coverage === "italy").length;
   const sources = [...new Set(datasets.map((d) => d.source))].length;
   const categories = [...new Set(datasets.map((d) => d.category))].length;
+  const joinable = datasets.filter((d) => d.joinField).length;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -48,7 +47,7 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 href="/dati"
-                className="inline-flex items-center gap-2 rounded-lg bg-[#00D9A3] px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-[#00B386] hover:shadow-md"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#00D9A3] px-5 py-2.5 text-[13px] font-semibold text-gray-900 shadow-sm transition-all hover:bg-[#00B386] hover:shadow-md"
               >
                 Esplora il Catalogo
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -118,7 +117,7 @@ export default function Home() {
             { value: totalDatasets, label: "Dataset catalogati" },
             { value: sources, label: "Fonti ufficiali" },
             { value: categories, label: "Temi coperti" },
-            { value: italy + sardinia, label: "Dataset con dati" },
+            { value: joinable, label: "Dataset incrociabili" },
           ].map(({ value, label }) => (
             <div key={label} className="text-center">
               <p className="font-heading text-2xl font-bold text-gray-900">

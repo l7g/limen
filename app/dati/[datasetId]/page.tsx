@@ -199,6 +199,7 @@ export default async function DatasetDetailPage({
           dataUrl={dataUrl}
           format={dataset.format}
           geometryType={dataset.geometryType}
+          coverage={dataset.coverage}
         />
 
         {/* Related datasets (shared join key) */}

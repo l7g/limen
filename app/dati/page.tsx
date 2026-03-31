@@ -1,125 +1,18 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
-import {
-  Search,
-  MapPin,
-  Users,
-  Train,
-  Car,
-  Coins,
-  Leaf,
-  Building2,
-  TrendingUp,
-  Check,
-  ChevronRight,
-} from "lucide-react";
-import { datasets, getGroupMembers } from "@/lib/datasets/catalog";
-import { computeStatus } from "@/lib/datasets/freshness";
-import type {
-  DatasetStatus,
-  DatasetCategory,
-  DatasetMeta,
-} from "@/lib/datasets/types";
+import { Search, Download, Database, Check } from "lucide-react";
+import { datasets } from "@/lib/datasets/catalog";
+import { daysSinceUpdate } from "@/lib/datasets/freshness";
+import type { DatasetCategory, DatasetMeta } from "@/lib/datasets/types";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import FreshnessBadge from "@/components/data/FreshnessBadge";
-import SelectionPanel from "@/components/data/SelectionPanel";
+import GeoFilter, { type GeoSelection } from "@/components/data/GeoFilter";
+import DatasetPanel from "@/components/data/DatasetPanel";
+import SelectionBar from "@/components/data/SelectionBar";
 
-/* ── Category metadata ── */
-const CATEGORIES: {
-  id: DatasetCategory;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: { pill: string; pillActive: string };
-}[] = [
-  {
-    id: "confini",
-    label: "Confini",
-    icon: MapPin,
-    color: {
-      pill: "bg-teal-50 text-teal-700",
-      pillActive: "bg-teal-600 text-white",
-    },
-  },
-  {
-    id: "demografia",
-    label: "Demografia",
-    icon: Users,
-    color: {
-      pill: "bg-blue-50 text-blue-700",
-      pillActive: "bg-blue-600 text-white",
-    },
-  },
-  {
-    id: "trasporti",
-    label: "Trasporti",
-    icon: Train,
-    color: {
-      pill: "bg-emerald-50 text-emerald-700",
-      pillActive: "bg-emerald-600 text-white",
-    },
-  },
-  {
-    id: "veicoli",
-    label: "Veicoli",
-    icon: Car,
-    color: {
-      pill: "bg-amber-50 text-amber-700",
-      pillActive: "bg-amber-600 text-white",
-    },
-  },
-  {
-    id: "economia",
-    label: "Economia",
-    icon: Coins,
-    color: {
-      pill: "bg-violet-50 text-violet-700",
-      pillActive: "bg-violet-600 text-white",
-    },
-  },
-  {
-    id: "ambiente",
-    label: "Ambiente",
-    icon: Leaf,
-    color: {
-      pill: "bg-rose-50 text-rose-700",
-      pillActive: "bg-rose-600 text-white",
-    },
-  },
-  {
-    id: "servizi",
-    label: "Servizi",
-    icon: Building2,
-    color: {
-      pill: "bg-indigo-50 text-indigo-700",
-      pillActive: "bg-indigo-600 text-white",
-    },
-  },
-  {
-    id: "indicatori",
-    label: "Indicatori",
-    icon: TrendingUp,
-    color: {
-      pill: "bg-pink-50 text-pink-700",
-      pillActive: "bg-pink-600 text-white",
-    },
-  },
-];
-
-const CATEGORY_BADGE: Record<DatasetCategory, string> = {
-  confini: "bg-teal-50 text-teal-700",
-  demografia: "bg-blue-50 text-blue-700",
-  trasporti: "bg-emerald-50 text-emerald-700",
-  veicoli: "bg-amber-50 text-amber-700",
-  economia: "bg-violet-50 text-violet-700",
-  ambiente: "bg-rose-50 text-rose-700",
-  servizi: "bg-indigo-50 text-indigo-700",
-  indicatori: "bg-pink-50 text-pink-700",
-};
-
-const CATEGORY_LABEL: Record<DatasetCategory, string> = {
+/* ── Category system ── */
+const CATEGORY_LABELS: Record<DatasetCategory, string> = {
   confini: "Confini",
   demografia: "Demografia",
   trasporti: "Trasporti",
@@ -130,290 +23,151 @@ const CATEGORY_LABEL: Record<DatasetCategory, string> = {
   indicatori: "Indicatori",
 };
 
-const FORMAT_BADGE: Record<string, string> = {
-  geojson: "bg-emerald-50 text-emerald-600",
-  csv: "bg-sky-50 text-sky-600",
-  gtfs: "bg-amber-50 text-amber-600",
-  json: "bg-gray-100 text-gray-600",
-  pbf: "bg-gray-100 text-gray-600",
-  raster: "bg-gray-100 text-gray-600",
+const CATEGORY_COLORS: Record<DatasetCategory, string> = {
+  confini: "bg-teal-400",
+  demografia: "bg-blue-400",
+  trasporti: "bg-emerald-400",
+  veicoli: "bg-amber-400",
+  economia: "bg-violet-400",
+  ambiente: "bg-rose-400",
+  servizi: "bg-indigo-400",
+  indicatori: "bg-pink-400",
 };
 
-type EnrichedDataset = DatasetMeta & { computedStatus: DatasetStatus };
+const CATEGORY_ORDER: DatasetCategory[] = [
+  "confini",
+  "demografia",
+  "trasporti",
+  "veicoli",
+  "economia",
+  "ambiente",
+  "servizi",
+  "indicatori",
+];
+
+const TIER_LABELS: Record<number, string> = {
+  1: "API",
+  2: "Curato",
+  3: "Calcolato",
+};
+
+const SARDEGNA_COD = "20";
+
+type EnrichedDataset = DatasetMeta & { ageDays: number };
 
 const enriched: EnrichedDataset[] = datasets.map((d) => ({
   ...d,
-  computedStatus: computeStatus(d) as DatasetStatus,
+  ageDays: daysSinceUpdate(d),
 }));
 
-/** A display row: either a standalone dataset or a collapsible group header. */
-interface DisplayRow {
-  /** Representative dataset (the one with groupLabel, or the standalone dataset). */
-  dataset: EnrichedDataset;
-  /** If this is a group header, the group key and member IDs. */
-  group?: { key: string; label: string; memberIds: string[] };
+function formatUpdatedAgo(days: number, lastUpdated: string): string {
+  if (days === 0) return "Oggi";
+  if (days === 1) return "Ieri";
+  if (days <= 30) return `${days}g fa`;
+  const d = new Date(lastUpdated);
+  return d.toLocaleDateString("it-IT", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-/** Build display rows: one per standalone dataset, one per group. */
-function buildDisplayRows(items: EnrichedDataset[]): DisplayRow[] {
-  const seenGroups = new Set<string>();
-  const rows: DisplayRow[] = [];
-
-  for (const d of items) {
-    if (!d.group) {
-      rows.push({ dataset: d });
-    } else if (!seenGroups.has(d.group)) {
-      seenGroups.add(d.group);
-      const members = getGroupMembers(d.group);
-      const memberIds = members.map((m) => m.id);
-      // Use the member with groupLabel as the representative
-      const repr =
-        enriched.find((e) => e.group === d.group && e.groupLabel) ?? d;
-      const label = repr.groupLabel ?? repr.name;
-      rows.push({
-        dataset: repr,
-        group: { key: d.group, label, memberIds },
-      });
-    }
-  }
-
-  return rows;
-}
-
-/* ── Reusable data row renderer (shared by catalog + future admin) ── */
-
+/* ── Single dataset row ── */
 function DatasetRow({
   d,
-  isSelected,
+  onOpen,
+  selected,
   onToggleSelect,
-  indent,
 }: {
   d: EnrichedDataset;
-  isSelected: boolean;
-  onToggleSelect: () => void;
-  indent?: boolean;
+  onOpen: (d: DatasetMeta) => void;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
 }) {
+  const dataUrl = d.filePath.startsWith("public/")
+    ? d.filePath.slice("public".length)
+    : `/${d.filePath}`;
+
   return (
-    <tr
-      className={`group border-b border-gray-100 transition-colors last:border-b-0 ${
-        isSelected ? "bg-[#00D9A3]/5" : "hover:bg-gray-50/60"
+    <div
+      className={`group flex items-stretch border-b border-gray-100 last:border-b-0 transition-colors ${
+        selected ? "bg-gray-50" : "hover:bg-gray-50/60"
       }`}
     >
-      <td className="px-3 py-3">
-        <button
-          type="button"
-          onClick={onToggleSelect}
-          className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
-            isSelected
-              ? "border-[#00D9A3] bg-[#00D9A3]"
-              : "border-gray-300 bg-white hover:border-gray-400"
-          } ${indent ? "ml-4" : ""}`}
-          aria-label={`Seleziona ${d.name}`}
-        >
-          {isSelected && <Check className="h-3 w-3 text-white" />}
-        </button>
-      </td>
-      <td className="px-3 py-3">
-        <Link href={`/dati/${d.id}`} className="block min-w-0">
-          <p
-            className={`truncate text-[13px] font-medium text-gray-900 transition-colors group-hover:text-[#00D9A3] ${indent ? "pl-4" : ""}`}
-          >
-            {d.name}
-          </p>
-          <p
-            className={`mt-0.5 text-[11px] text-gray-400 ${indent ? "pl-4" : ""}`}
-          >
-            {d.source}
-          </p>
-        </Link>
-      </td>
-      <td className="hidden px-3 py-3 md:table-cell">
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${CATEGORY_BADGE[d.category]}`}
-        >
-          {CATEGORY_LABEL[d.category]}
-        </span>
-      </td>
-      <td className="hidden px-3 py-3 sm:table-cell">
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            d.coverage === "italy"
-              ? "bg-blue-50 text-blue-600"
-              : "bg-teal-50 text-teal-600"
+      {/* Category color indicator */}
+      <div
+        className={`w-0.5 shrink-0 ${CATEGORY_COLORS[d.category]} opacity-60`}
+      />
+
+      {/* Checkbox */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSelect(d.id);
+        }}
+        className="flex shrink-0 items-center pl-3.5 pr-2"
+        aria-label={`Seleziona ${d.name}`}
+      >
+        <div
+          className={`flex h-4.5 w-4.5 items-center justify-center rounded-[5px] border transition-all ${
+            selected
+              ? "border-gray-900 bg-gray-900 text-white"
+              : "border-gray-300 bg-white group-hover:border-gray-400"
           }`}
         >
-          {d.coverage === "italy"
-            ? "Italia"
-            : d.coverage === "sardinia"
-              ? "Sardegna"
-              : "Custom"}
-        </span>
-      </td>
-      <td className="hidden px-3 py-3 lg:table-cell">
-        <span
-          className={`inline-flex items-center rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase ${FORMAT_BADGE[d.format] ?? "bg-gray-100 text-gray-600"}`}
-        >
-          {d.format}
-        </span>
-      </td>
-      <td className="px-3 py-3">
-        <FreshnessBadge status={d.computedStatus} />
-      </td>
-      <td className="px-3 py-3">
-        <Link
-          href={`/dati/${d.id}`}
-          className="text-[12px] text-gray-400 transition-colors group-hover:text-gray-600"
-          aria-label={`Dettaglio ${d.name}`}
-        >
-          →
-        </Link>
-      </td>
-    </tr>
-  );
-}
+          {selected && <Check className="h-3 w-3" strokeWidth={2.5} />}
+        </div>
+      </button>
 
-function GroupRows({
-  representative,
-  isGroup,
-  groupLabel,
-  memberCount,
-  isExpanded,
-  allSelected,
-  someSelected,
-  children,
-  selectedIds,
-  onToggleExpand,
-  onToggleSelect,
-  onToggleChildSelect,
-}: {
-  representative: EnrichedDataset;
-  isGroup: boolean;
-  groupLabel?: string;
-  memberCount: number;
-  isExpanded: boolean;
-  allSelected: boolean;
-  someSelected: boolean;
-  children: EnrichedDataset[];
-  selectedIds: Set<string>;
-  onToggleExpand: () => void;
-  onToggleSelect: () => void;
-  onToggleChildSelect: (id: string) => void;
-}) {
-  if (!isGroup) {
-    return (
-      <DatasetRow
-        d={representative}
-        isSelected={selectedIds.has(representative.id)}
-        onToggleSelect={onToggleSelect}
-      />
-    );
-  }
-
-  return (
-    <>
-      {/* Group header row */}
-      <tr
-        className={`group border-b border-gray-100 transition-colors ${
-          allSelected
-            ? "bg-[#00D9A3]/5"
-            : someSelected
-              ? "bg-[#00D9A3]/[0.02]"
-              : "hover:bg-gray-50/60"
-        }`}
+      {/* Main — clickable to open panel */}
+      <button
+        type="button"
+        onClick={() => onOpen(d)}
+        className="flex min-w-0 flex-1 items-center gap-4 py-3 pr-2 text-left"
       >
-        <td className="px-3 py-3">
-          <button
-            type="button"
-            onClick={onToggleSelect}
-            className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
-              allSelected
-                ? "border-[#00D9A3] bg-[#00D9A3]"
-                : someSelected
-                  ? "border-[#00D9A3] bg-[#00D9A3]/40"
-                  : "border-gray-300 bg-white hover:border-gray-400"
-            }`}
-            aria-label={`Seleziona ${groupLabel}`}
-          >
-            {allSelected && <Check className="h-3 w-3 text-white" />}
-          </button>
-        </td>
-        <td className="px-3 py-3">
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="flex items-center gap-1.5 min-w-0"
-          >
-            <ChevronRight
-              className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${
-                isExpanded ? "rotate-90" : ""
-              }`}
-            />
-            <div className="min-w-0 text-left">
-              <p className="truncate text-[13px] font-semibold text-gray-900 transition-colors group-hover:text-[#00D9A3]">
-                {groupLabel}
-              </p>
-              <p className="mt-0.5 text-[11px] text-gray-400">
-                {memberCount} dataset · {representative.source}
-              </p>
-            </div>
-          </button>
-        </td>
-        <td className="hidden px-3 py-3 md:table-cell">
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${CATEGORY_BADGE[representative.category]}`}
-          >
-            {CATEGORY_LABEL[representative.category]}
-          </span>
-        </td>
-        <td className="hidden px-3 py-3 sm:table-cell">
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-              representative.coverage === "italy"
-                ? "bg-blue-50 text-blue-600"
-                : "bg-teal-50 text-teal-600"
-            }`}
-          >
-            {representative.coverage === "italy"
-              ? "Italia"
-              : representative.coverage === "sardinia"
-                ? "Sardegna"
-                : "Custom"}
-          </span>
-        </td>
-        <td className="hidden px-3 py-3 lg:table-cell">
-          <span
-            className={`inline-flex items-center rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase ${FORMAT_BADGE[representative.format] ?? "bg-gray-100 text-gray-600"}`}
-          >
-            {representative.format}
-          </span>
-        </td>
-        <td className="px-3 py-3">
-          <FreshnessBadge status={representative.computedStatus} />
-        </td>
-        <td className="px-3 py-3">
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="text-[12px] text-gray-400 transition-colors group-hover:text-gray-600"
-            aria-label={isExpanded ? "Comprimi" : "Espandi"}
-          >
-            {isExpanded ? "−" : "+"}
-          </button>
-        </td>
-      </tr>
+        {/* Name + source + freshness */}
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-[13.5px] font-medium text-gray-900 group-hover:text-gray-700 transition-colors">
+              {d.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px] text-gray-400">
+            <span>{d.source}</span>
+            <span className="text-gray-200">·</span>
+            <span>{formatUpdatedAgo(d.ageDays, d.lastUpdated)}</span>
+          </div>
+        </div>
 
-      {/* Expanded child rows */}
-      {isExpanded &&
-        children.map((child) => (
-          <DatasetRow
-            key={child.id}
-            d={child}
-            isSelected={selectedIds.has(child.id)}
-            onToggleSelect={() => onToggleChildSelect(child.id)}
-            indent
-          />
-        ))}
-    </>
+        {/* Metadata badges — right side */}
+        <div className="hidden shrink-0 items-center gap-2 sm:flex">
+          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10.5px] font-medium text-gray-500">
+            {d.coverage === "italy" ? "IT" : "SRD"}
+          </span>
+          <span className="w-12 text-right font-mono text-[10.5px] uppercase text-gray-400">
+            {d.format}
+          </span>
+          <span className="w-14 text-right text-[10.5px] text-gray-400">
+            {TIER_LABELS[d.tier]}
+          </span>
+        </div>
+      </button>
+
+      {/* Download — always visible but subtle */}
+      <div className="flex shrink-0 items-center pr-3.5">
+        <a
+          href={dataUrl}
+          download
+          onClick={(e) => e.stopPropagation()}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 hover:bg-gray-100 hover:text-gray-600 transition-all"
+          title={`Scarica ${d.format.toUpperCase()}`}
+          aria-label={`Scarica ${d.name}`}
+        >
+          <Download className="h-3.5 w-3.5" />
+        </a>
+      </div>
+    </div>
   );
 }
 
@@ -422,52 +176,24 @@ export default function DatiPage() {
   const [categoryFilter, setCategoryFilter] = useState<DatasetCategory | null>(
     null,
   );
-  const [coverageFilter, setCoverageFilter] = useState<string | null>(null);
+  const [geoSelection, setGeoSelection] = useState<GeoSelection>({
+    regione: null,
+    provincia: null,
+    comune: null,
+  });
+  const [panelDataset, setPanelDataset] = useState<DatasetMeta | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const hasSelection = selectedIds.size > 0;
+  const handleOpenPanel = useCallback((d: DatasetMeta) => {
+    setPanelDataset(d);
+  }, []);
 
-  // "/" to focus search, Escape to deselect
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (e.key === "Escape" && hasSelection) {
-        setSelectedIds(new Set());
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [hasSelection]);
+  const handleClosePanel = useCallback(() => {
+    setPanelDataset(null);
+  }, []);
 
-  /** Filtered datasets (individual items, before grouping). */
-  const filtered = useMemo(() => {
-    let result = enriched;
-    if (query) {
-      const q = query.toLowerCase();
-      result = result.filter(
-        (d) =>
-          d.name.toLowerCase().includes(q) ||
-          d.source.toLowerCase().includes(q) ||
-          d.description.toLowerCase().includes(q) ||
-          (d.groupLabel && d.groupLabel.toLowerCase().includes(q)),
-      );
-    }
-    if (categoryFilter)
-      result = result.filter((d) => d.category === categoryFilter);
-    if (coverageFilter)
-      result = result.filter((d) => d.coverage === coverageFilter);
-    return result;
-  }, [query, categoryFilter, coverageFilter]);
-
-  /** Display rows: collapsed groups + standalone items. */
-  const displayRows = useMemo(() => buildDisplayRows(filtered), [filtered]);
-
-  const toggleSelect = useCallback((id: string) => {
+  const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -476,268 +202,220 @@ export default function DatiPage() {
     });
   }, []);
 
-  /** Toggle all members of a group. */
-  const toggleGroupSelect = useCallback((memberIds: string[]) => {
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleRemoveFromSelection = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      const allSelected = memberIds.every((id) => next.has(id));
-      if (allSelected) {
-        memberIds.forEach((id) => next.delete(id));
-      } else {
-        memberIds.forEach((id) => next.add(id));
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const selectedDatasets = useMemo(
+    () => enriched.filter((d) => selectedIds.has(d.id)),
+    [selectedIds],
+  );
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "/" && document.activeElement?.tagName !== "INPUT") {
+        e.preventDefault();
+        searchRef.current?.focus();
       }
-      return next;
-    });
-  }, []);
-
-  const toggleGroupExpand = useCallback((groupKey: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupKey)) next.delete(groupKey);
-      else next.add(groupKey);
-      return next;
-    });
-  }, []);
-
-  const toggleSelectAll = useCallback(() => {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map((d) => d.id)));
     }
-  }, [filtered, selectedIds.size]);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
 
-  const allSelected =
-    filtered.length > 0 && selectedIds.size === filtered.length;
+  /* ── Filtering ── */
+  const filtered = useMemo(() => {
+    let result = enriched;
+
+    if (query) {
+      const q = query.toLowerCase();
+      result = result.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          d.source.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q),
+      );
+    }
+
+    if (categoryFilter)
+      result = result.filter((d) => d.category === categoryFilter);
+
+    // Geo-scope: resolve effective region from regione OR provincia selection
+    const effectiveRegionCod =
+      geoSelection.regione?.cod ?? geoSelection.provincia?.regioneCod ?? null;
+
+    if (effectiveRegionCod) {
+      const isSardegna = effectiveRegionCod === SARDEGNA_COD;
+      if (!isSardegna) {
+        result = result.filter((d) => d.coverage === "italy");
+      }
+    }
+
+    return result;
+  }, [query, categoryFilter, geoSelection.regione, geoSelection.provincia]);
+
+  /* Category counts for pills */
+  const categoryCounts = useMemo(() => {
+    const counts: Partial<Record<DatasetCategory, number>> = {};
+    for (const d of filtered) {
+      counts[d.category] = (counts[d.category] ?? 0) + 1;
+    }
+    return counts;
+  }, [filtered]);
+
+  const totalDatasets = enriched.length;
+  const totalSources = new Set(enriched.map((d) => d.source)).size;
+  const hasActiveFilters = !!(query || categoryFilter || geoSelection.regione);
 
   return (
     <div className="flex flex-1 flex-col">
       <Header />
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6 md:py-12">
-        {/* Header */}
-        <div className="max-w-2xl">
-          <p className="text-[12px] font-semibold uppercase tracking-widest text-[#00D9A3]">
-            Catalogo
-          </p>
-          <h1 className="mt-1.5 font-heading text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
-            Dati pubblici italiani
-          </h1>
-          <p className="mt-2 text-[13px] leading-relaxed text-gray-500">
-            {displayRows.length} voci da{" "}
-            {new Set(enriched.map((d) => d.source)).size} fonti ufficiali —
-            esplora, seleziona e combina.
-          </p>
-        </div>
+      <main
+        className={`mx-auto w-full max-w-4xl px-4 py-10 md:px-6 md:py-14 ${selectedDatasets.length > 0 ? "pb-28" : ""}`}
+      >
+        {/* ── Header ── */}
+        <h1 className="font-heading text-[24px] font-bold tracking-tight text-gray-900 md:text-[28px]">
+          Catalogo Dati
+        </h1>
+        <p className="mt-1.5 max-w-lg text-[14px] leading-relaxed text-gray-400">
+          {totalDatasets} dataset da {totalSources} fonti istituzionali.
+          Seleziona e scarica.
+        </p>
 
-        {/* Search + coverage pills */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* ── Search + Geo row ── */}
+        <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-start">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
             <input
               type="text"
               ref={searchRef}
-              placeholder="Cerca dataset, fonte, tema…  /"
+              placeholder="Cerca dataset…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-[#00D9A3] focus:outline-none focus:ring-1 focus:ring-[#00D9A3]"
+              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-[13px] text-gray-900 placeholder:text-gray-400 focus:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all"
             />
           </div>
-          <div className="flex gap-1.5">
-            {([null, "italy", "sardinia"] as const).map((c) => (
-              <button
-                key={c ?? "all"}
-                type="button"
-                onClick={() => setCoverageFilter(c)}
-                className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                  coverageFilter === c
-                    ? "bg-[#00D9A3] text-gray-900"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {c === null ? "Tutte" : c === "italy" ? "Italia" : "Sardegna"}
-              </button>
-            ))}
-          </div>
+          <GeoFilter value={geoSelection} onChange={setGeoSelection} />
         </div>
 
-        {/* Category chips */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        {/* ── Category filter pills ── */}
+        <div className="mt-4 flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setCategoryFilter(null)}
-            className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+            className={`rounded-full px-3 py-1 text-[11.5px] font-medium transition-all ${
               categoryFilter === null
                 ? "bg-gray-900 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                : "bg-gray-100 text-gray-500 hover:text-gray-700"
             }`}
           >
             Tutti
+            <span className="ml-1 text-[10px] opacity-60">
+              {filtered.length}
+            </span>
           </button>
-          {CATEGORIES.map((cat) => {
-            const count = filtered.filter((d) => d.category === cat.id).length;
-            const isActive = categoryFilter === cat.id;
+          {CATEGORY_ORDER.map((catId) => {
+            const count = categoryCounts[catId] ?? 0;
+            const isActive = categoryFilter === catId;
             const isDisabled = count === 0 && !isActive;
-            const Icon = cat.icon;
             return (
               <button
-                key={cat.id}
+                key={catId}
                 type="button"
                 onClick={() =>
-                  !isDisabled && setCategoryFilter(isActive ? null : cat.id)
+                  !isDisabled && setCategoryFilter(isActive ? null : catId)
                 }
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-medium transition-all ${
                   isActive
-                    ? cat.color.pillActive
+                    ? "bg-gray-900 text-white"
                     : isDisabled
                       ? "cursor-default bg-gray-50 text-gray-300"
-                      : `${cat.color.pill} hover:opacity-80`
+                      : "bg-gray-100 text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <Icon className="h-3 w-3" />
-                {cat.label}
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-white/60" : CATEGORY_COLORS[catId]} ${isDisabled ? "opacity-30" : "opacity-70"}`}
+                />
+                {CATEGORY_LABELS[catId]}
                 <span className="text-[10px] opacity-60">{count}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Results count */}
-        {(query || categoryFilter || coverageFilter) && (
-          <p className="mt-3 text-[11px] text-gray-400">
+        {hasActiveFilters && (
+          <p className="mt-3 text-[12px] text-gray-400">
             {filtered.length} di {enriched.length} dataset
+            {geoSelection.regione && <> · {geoSelection.regione.nome}</>}
           </p>
         )}
 
-        {/* Main content: Table + Selection Panel */}
-        <div className="mt-5 flex gap-0">
-          {/* Data table */}
-          <div className="min-w-0 flex-1">
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  {/* Table head */}
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50/80">
-                      <th className="w-10 px-3 py-3">
-                        <button
-                          type="button"
-                          onClick={toggleSelectAll}
-                          className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
-                            allSelected
-                              ? "border-[#00D9A3] bg-[#00D9A3]"
-                              : "border-gray-300 bg-white hover:border-gray-400"
-                          }`}
-                          aria-label="Seleziona tutti"
-                        >
-                          {allSelected && (
-                            <Check className="h-3 w-3 text-white" />
-                          )}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-widest text-gray-400">
-                        Dataset
-                      </th>
-                      <th className="hidden px-3 py-3 text-left text-[11px] font-bold uppercase tracking-widest text-gray-400 md:table-cell">
-                        Tema
-                      </th>
-                      <th className="hidden px-3 py-3 text-left text-[11px] font-bold uppercase tracking-widest text-gray-400 sm:table-cell">
-                        Copertura
-                      </th>
-                      <th className="hidden px-3 py-3 text-left text-[11px] font-bold uppercase tracking-widest text-gray-400 lg:table-cell">
-                        Formato
-                      </th>
-                      <th className="px-3 py-3 text-left text-[11px] font-bold uppercase tracking-widest text-gray-400">
-                        Stato
-                      </th>
-                      <th className="w-10 px-3 py-3" />
-                    </tr>
-                  </thead>
-
-                  {/* Table body */}
-                  <tbody>
-                    {displayRows.map((row) => {
-                      const d = row.dataset;
-                      const isGroup = !!row.group;
-                      const isExpanded =
-                        isGroup && expandedGroups.has(row.group!.key);
-                      const memberIds = row.group?.memberIds ?? [d.id];
-                      const groupAllSelected = memberIds.every((id) =>
-                        selectedIds.has(id),
-                      );
-                      const groupSomeSelected =
-                        !groupAllSelected &&
-                        memberIds.some((id) => selectedIds.has(id));
-
-                      // Get group members for expanded display
-                      const children = isExpanded
-                        ? enriched.filter((e) => e.group === row.group!.key)
-                        : [];
-
-                      return (
-                        <GroupRows
-                          key={d.id}
-                          representative={d}
-                          isGroup={isGroup}
-                          groupLabel={row.group?.label}
-                          memberCount={memberIds.length}
-                          isExpanded={isExpanded}
-                          allSelected={groupAllSelected}
-                          someSelected={groupSomeSelected}
-                          children={children}
-                          selectedIds={selectedIds}
-                          onToggleExpand={() =>
-                            row.group && toggleGroupExpand(row.group.key)
-                          }
-                          onToggleSelect={() =>
-                            isGroup
-                              ? toggleGroupSelect(memberIds)
-                              : toggleSelect(d.id)
-                          }
-                          onToggleChildSelect={toggleSelect}
-                        />
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {filtered.length === 0 && (
-                <div className="py-16 text-center">
-                  <p className="text-[13px] text-gray-400">
-                    Nessun dataset trovato.
-                  </p>
-                </div>
-              )}
+        {/* ── Table ── */}
+        <div className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          {/* Column header */}
+          <div className="flex items-center border-b border-gray-100 bg-gray-50/80 px-4 py-2.5">
+            <div className="pl-8 flex-1 text-[11px] font-medium uppercase tracking-wider text-gray-400">
+              Dataset
             </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <span className="w-10 text-center text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Cop.
+              </span>
+              <span className="w-12 text-right text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Formato
+              </span>
+              <span className="w-14 text-right text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Tipo
+              </span>
+            </div>
+            <div className="w-10 shrink-0" />
           </div>
 
-          {/* Selection Panel — slides in */}
-          <div
-            className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
-              hasSelection ? "ml-4 w-[320px] opacity-100" : "ml-0 w-0 opacity-0"
-            }`}
-          >
-            <div className="w-[320px]">
-              <div className="sticky top-20 h-[calc(100vh-8rem)] rounded-xl border border-gray-200 bg-white/90 shadow-sm backdrop-blur-md">
-                <SelectionPanel
-                  selectedIds={selectedIds}
-                  onDeselect={(id) =>
-                    setSelectedIds((prev) => {
-                      const next = new Set(prev);
-                      next.delete(id);
-                      return next;
-                    })
-                  }
-                  onDeselectAll={() => setSelectedIds(new Set())}
-                />
-              </div>
+          {/* Rows */}
+          {filtered.length > 0 ? (
+            filtered.map((d) => (
+              <DatasetRow
+                key={d.id}
+                d={d}
+                onOpen={handleOpenPanel}
+                selected={selectedIds.has(d.id)}
+                onToggleSelect={handleToggleSelect}
+              />
+            ))
+          ) : (
+            <div className="py-20 text-center">
+              <Database className="mx-auto h-6 w-6 text-gray-300" />
+              <p className="mt-3 text-[13px] text-gray-400">
+                Nessun dataset trovato.
+              </p>
             </div>
-          </div>
+          )}
         </div>
       </main>
 
       <Footer />
+
+      {/* Slide-over panel */}
+      {panelDataset && (
+        <DatasetPanel dataset={panelDataset} onClose={handleClosePanel} />
+      )}
+
+      {/* Selection action bar */}
+      {selectedDatasets.length > 0 && (
+        <SelectionBar
+          selected={selectedDatasets}
+          onClear={handleClearSelection}
+          onRemove={handleRemoveFromSelection}
+        />
+      )}
     </div>
   );
 }

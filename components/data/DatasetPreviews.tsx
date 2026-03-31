@@ -20,16 +20,20 @@ const DataPreview = dynamic(() => import("@/components/data/DataPreview"), {
   ),
 });
 
+import type { DatasetCoverage } from "@/lib/datasets/types";
+
 interface Props {
   dataUrl: string;
   format: string;
   geometryType?: "point" | "line" | "polygon" | "none";
+  coverage?: DatasetCoverage;
 }
 
 export default function DatasetPreviews({
   dataUrl,
   format,
   geometryType,
+  coverage,
 }: Props) {
   const showMap =
     geometryType &&
@@ -44,7 +48,11 @@ export default function DatasetPreviews({
           <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
             <Map className="h-4 w-4" /> Anteprima Mappa
           </h2>
-          <MapPreview dataUrl={dataUrl} geometryType={geometryType} />
+          <MapPreview
+            dataUrl={dataUrl}
+            geometryType={geometryType}
+            coverage={coverage}
+          />
         </div>
       )}
 

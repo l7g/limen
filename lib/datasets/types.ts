@@ -98,6 +98,22 @@ export type ViewMode = "map" | "chart";
 /** Chart type for chart view. */
 export type ChartType = "ranking" | "histogram";
 
+/** Geographic scope filter for workbench. */
+export interface GeoScope {
+  type: "regione" | "provincia";
+  code: number;
+  name: string;
+}
+
+/** Legend data computed from choropleth breaks. */
+export interface LegendData {
+  field: string;
+  label: string;
+  unit?: string;
+  breaks: number[];
+  palette: readonly string[];
+}
+
 /** Workbench state stored in Zustand. */
 export interface WorkbenchState {
   layers: LayerConfig[];
@@ -109,4 +125,6 @@ export interface WorkbenchState {
   viewMode: ViewMode;
   chartType: ChartType;
   activeTemplate: string | null;
+  geoScope: GeoScope | null;
+  activeLegend: LegendData | null;
 }

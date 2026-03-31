@@ -2,7 +2,9 @@ import { create } from "zustand";
 import type {
   ChartType,
   ChoroplethConfig,
+  GeoScope,
   LayerConfig,
+  LegendData,
   ViewMode,
   WorkbenchState,
 } from "./datasets/types";
@@ -26,6 +28,8 @@ interface WorkbenchActions {
   setViewMode: (mode: ViewMode) => void;
   setChartType: (type: ChartType) => void;
   applyTemplate: (templateId: string, layers: LayerConfig[]) => void;
+  setGeoScope: (scope: GeoScope | null) => void;
+  setActiveLegend: (legend: LegendData | null) => void;
 }
 
 /** Initial map view: centered on Italy. */
@@ -117,6 +121,8 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
     viewMode: "map",
     chartType: "ranking",
     activeTemplate: null,
+    geoScope: null,
+    activeLegend: null,
 
     // ── Actions ────────────────────────────────────────────
     toggleLayer: (layerId) =>
@@ -164,6 +170,10 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
     setViewMode: (mode) => set({ viewMode: mode }),
 
     setChartType: (type) => set({ chartType: type }),
+
+    setGeoScope: (scope) => set({ geoScope: scope }),
+
+    setActiveLegend: (legend) => set({ activeLegend: legend }),
 
     applyTemplate: (templateId, layers) =>
       set({ activeTemplate: templateId, layers }),

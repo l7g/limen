@@ -11,7 +11,11 @@ import {
   type MapLayerMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { LngLatBoundsLike } from "maplibre-gl";
+import type {
+  LngLatBoundsLike,
+  LngLatBounds as LngLatBoundsType,
+} from "maplibre-gl";
+import { LngLatBounds } from "maplibre-gl";
 import { useWorkbenchStore } from "@/lib/store";
 import {
   INDICATORS,
@@ -80,6 +84,25 @@ function useEnrichedGeoJson(
 
 const NUM_CLASSES = 5;
 
+/** Compute bounding box of a GeoJSON feature. */
+function bboxOfFeature(feature: GeoJSON.Feature): LngLatBoundsType | null {
+  const bounds = new LngLatBounds();
+  function addCoord(c: number[]) {
+    bounds.extend([c[0], c[1]]);
+  }
+  function walk(coords: unknown) {
+    if (!Array.isArray(coords)) return;
+    if (typeof coords[0] === "number") {
+      addCoord(coords as number[]);
+    } else {
+      for (const c of coords) walk(c);
+    }
+  }
+  if (!feature.geometry) return null;
+  walk((feature.geometry as GeoJSON.Polygon).coordinates);
+  return bounds.isEmpty() ? null : bounds;
+}
+
 export default function MapView() {
   const mapRef = useRef<MapRef>(null);
 
@@ -87,6 +110,8 @@ export default function MapView() {
   const setCenter = useWorkbenchStore((s) => s.setCenter);
   const setZoom = useWorkbenchStore((s) => s.setZoom);
   const selectFeature = useWorkbenchStore((s) => s.selectFeature);
+  const setActiveLegend = useWorkbenchStore((s) => s.setActiveLegend);
+  const geoScope = useWorkbenchStore((s) => s.geoScope);
 
   const { center, zoom } = useWorkbenchStore.getState();
 
@@ -190,6 +215,52 @@ export default function MapView() {
 
     return result;
   }, [activeFillLayers, enrichedComuni, enrichedProvince]);
+
+  // ── Sync legend data into store for sidebar ─────────────────────
+  useEffect(() => {
+    // Find the first active fill with expressions
+    const firstActive = activeFillLayers[0];
+    if (!firstActive) {
+      setActiveLegend(null);
+      return;
+    }
+    const expr = fillExpressions[firstActive.id];
+    const ind = INDICATORS.find((i) => i.id === firstActive.id);
+    if (!expr || !ind) {
+      setActiveLegend(null);
+      return;
+    }
+    const field = firstActive.choropleth?.field ?? ind.defaultField;
+    const fieldDef = ind.fields.find((f) => f.key === field);
+    setActiveLegend({
+      field,
+      label: fieldDef?.label ?? field,
+      unit: fieldDef?.unit,
+      breaks: expr.breaks,
+      palette: expr.palette,
+    });
+  }, [fillExpressions, activeFillLayers, setActiveLegend]);
+
+  // ── Fly to geoScope region bounds ──────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!geoScope) {
+      // Reset to Italy
+      map.fitBounds(ITALY_BOUNDS, { padding: 20, duration: 800 });
+      return;
+    }
+    // Find the region in regioni GeoJSON and compute its bbox
+    if (geoScope.type === "regione" && regioniData) {
+      const feature = regioniData.features.find(
+        (f) => Number(f.properties?.COD_REG) === geoScope.code,
+      );
+      if (feature) {
+        const bounds = bboxOfFeature(feature);
+        if (bounds) map.fitBounds(bounds, { padding: 40, duration: 800 });
+      }
+    }
+  }, [geoScope, regioniData]);
 
   // ── Interactive layer IDs (include fills for click) ────────────
   const interactiveLayerIds = useMemo(() => {

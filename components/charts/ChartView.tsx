@@ -18,6 +18,8 @@ import {
   PALETTES,
   type IndicatorDef,
 } from "@/lib/workbench/choropleth";
+import { rowMatchesScope } from "@/lib/workbench/geo-scope";
+import type { GeoScope } from "@/lib/datasets/types";
 import Papa from "papaparse";
 import { BarChart3 } from "lucide-react";
 
@@ -27,9 +29,14 @@ interface DataRow {
   value: number;
 }
 
-/** Load CSV and extract name + value columns. */
-function useCsvData(indicator: IndicatorDef | undefined, field: string) {
+/** Load CSV and extract name + value columns, optionally filtered by geoScope. */
+function useCsvData(
+  indicator: IndicatorDef | undefined,
+  field: string,
+  geoScope: GeoScope | null,
+) {
   const [data, setData] = useState<DataRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -52,8 +59,14 @@ function useCsvData(indicator: IndicatorDef | undefined, field: string) {
             ["comune", "provincia", "COMUNE", "DEN_PROV"].includes(k),
           ) ?? Object.keys(rows[0] ?? {})[1];
 
+        setTotalCount(rows.length);
+
         const parsed: DataRow[] = [];
         for (const row of rows) {
+          // Apply geographic filter
+          if (geoScope && !rowMatchesScope(row, geoScope, indicator.joinKey)) {
+            continue;
+          }
           const v = parseFloat(row[field]);
           if (isNaN(v)) continue;
           parsed.push({ name: row[nameCol] ?? "?", value: v });
@@ -66,15 +79,16 @@ function useCsvData(indicator: IndicatorDef | undefined, field: string) {
     return () => {
       cancelled = true;
     };
-  }, [indicator, field]);
+  }, [indicator, field, geoScope]);
 
-  return { data, loading };
+  return { data, totalCount, loading };
 }
 
 export default function ChartView() {
   const layers = useWorkbenchStore((s) => s.layers);
   const chartType = useWorkbenchStore((s) => s.chartType);
   const setChartType = useWorkbenchStore((s) => s.setChartType);
+  const geoScope = useWorkbenchStore((s) => s.geoScope);
 
   // Find first active fill layer
   const activeLayer = layers.find((l) => l.type === "fill" && l.visible);
@@ -90,7 +104,11 @@ export default function ChartView() {
     : "teal";
   const palette = PALETTES[palKey];
 
-  const { data, loading } = useCsvData(indicator, activeField);
+  const { data, totalCount, loading } = useCsvData(
+    indicator,
+    activeField,
+    geoScope,
+  );
 
   // Sort for ranking (top 50)
   const rankingData = useMemo(() => {
@@ -154,7 +172,19 @@ export default function ChartView() {
             {fieldDef?.label ?? activeField}
           </h2>
           <p className="text-[11px] text-zinc-500">
-            {indicator.label} · {data.length.toLocaleString("it-IT")} elementi
+            {geoScope ? (
+              <span className="text-[#00D9A3] font-medium">
+                {geoScope.name}
+              </span>
+            ) : (
+              <span>Italia</span>
+            )}
+            {" · "}
+            {indicator.label} · {data.length.toLocaleString("it-IT")}
+            {geoScope && totalCount > data.length
+              ? ` / ${totalCount.toLocaleString("it-IT")}`
+              : ""}
+            {" elementi"}
             {fieldDef?.unit ? ` · ${fieldDef.unit}` : ""}
           </p>
         </div>

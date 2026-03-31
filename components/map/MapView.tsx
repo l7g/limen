@@ -13,6 +13,16 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { LngLatBoundsLike } from "maplibre-gl";
 import { useWorkbenchStore } from "@/lib/store";
+import {
+  INDICATORS,
+  INDICATOR_PALETTES,
+  PALETTES,
+  enrichGeoJSON,
+  extractValues,
+  quantileBreaks,
+  buildStepExpression,
+  type IndicatorDef,
+} from "@/lib/workbench/choropleth";
 
 /** Free CARTO Dark Matter — no API key, dark theme for workbench. */
 const BASEMAP_STYLE =
@@ -22,14 +32,6 @@ const BASEMAP_STYLE =
 const ITALY_BOUNDS: LngLatBoundsLike = [
   [5.5, 35.0],
   [19.5, 48.0],
-];
-
-/** Layer IDs that support click-to-inspect. */
-const INTERACTIVE_LAYER_IDS = [
-  "boundaries-regioni",
-  "boundaries-province",
-  "boundaries-comuni",
-  "gtfs-stops",
 ];
 
 /** Fetch GeoJSON and cache in state. Returns null until loaded. */
@@ -50,6 +52,33 @@ function useGeoJson(url: string, enabled: boolean) {
   }, [url, enabled]);
   return data;
 }
+
+/** Enrich GeoJSON with CSV data for choropleth rendering. */
+function useEnrichedGeoJson(
+  geojson: GeoJSON.FeatureCollection | null,
+  indicator: IndicatorDef | undefined,
+  enabled: boolean,
+) {
+  const [enriched, setEnriched] = useState<GeoJSON.FeatureCollection | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!enabled || !geojson || !indicator) {
+      setEnriched(null);
+      return;
+    }
+    let cancelled = false;
+    enrichGeoJSON(geojson, indicator).then((result) => {
+      if (!cancelled) setEnriched(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [geojson, indicator, enabled]);
+  return enriched;
+}
+
+const NUM_CLASSES = 5;
 
 export default function MapView() {
   const mapRef = useRef<MapRef>(null);
@@ -73,14 +102,108 @@ export default function MapView() {
   const comuni = layerMap["boundaries-comuni"];
   const gtfsStops = layerMap["gtfs-stops"];
 
-  // Fetch GeoJSON data as objects — more reliable than passing URLs to Source
+  // ── Which fill layers are active? ──────────────────────────────
+  const activeFillLayers = useMemo(
+    () => layers.filter((l) => l.type === "fill" && l.visible),
+    [layers],
+  );
+
+  // Determine which boundary levels we need for active fills
+  const needsComuniBoundary = activeFillLayers.some((l) => {
+    const ind = INDICATORS.find((i) => i.id === l.id);
+    return ind?.scale === "comunale";
+  });
+  const needsProvinceBoundary = activeFillLayers.some((l) => {
+    const ind = INDICATORS.find((i) => i.id === l.id);
+    return ind?.scale === "provinciale";
+  });
+
+  // Fetch GeoJSON data — always for line layers, conditionally for fills
   const regioniData = useGeoJson("/data/boundaries/regioni.geojson", true);
   const provinceData = useGeoJson("/data/boundaries/province.geojson", true);
-  const comuniData = useGeoJson("/data/boundaries/comuni.geojson", true);
+  const comuniData = useGeoJson(
+    "/data/boundaries/comuni.geojson",
+    !!(comuni?.visible || needsComuniBoundary),
+  );
   const gtfsData = useGeoJson(
     "/data/transit/all-stops.geojson",
     !!gtfsStops?.visible,
   );
+
+  // ── Choropleth: enrich boundaries with CSV data ────────────────
+  // Find the first active comunale and provinciale indicators
+  const activeComunaleInd = useMemo(
+    () =>
+      INDICATORS.find(
+        (ind) =>
+          ind.scale === "comunale" &&
+          activeFillLayers.some((l) => l.id === ind.id),
+      ),
+    [activeFillLayers],
+  );
+  const activeProvincialeInd = useMemo(
+    () =>
+      INDICATORS.find(
+        (ind) =>
+          ind.scale === "provinciale" &&
+          activeFillLayers.some((l) => l.id === ind.id),
+      ),
+    [activeFillLayers],
+  );
+
+  const enrichedComuni = useEnrichedGeoJson(
+    comuniData,
+    activeComunaleInd,
+    !!activeComunaleInd,
+  );
+  const enrichedProvince = useEnrichedGeoJson(
+    provinceData,
+    activeProvincialeInd,
+    !!activeProvincialeInd,
+  );
+
+  // ── Compute color expressions for each active fill layer ───────
+  const fillExpressions = useMemo(() => {
+    const result: Record<
+      string,
+      { expr: unknown[]; breaks: number[]; palette: readonly string[] }
+    > = {};
+
+    for (const layer of activeFillLayers) {
+      const ind = INDICATORS.find((i) => i.id === layer.id);
+      if (!ind) continue;
+
+      const field = layer.choropleth?.field ?? ind.defaultField;
+      const data = ind.scale === "comunale" ? enrichedComuni : enrichedProvince;
+      if (!data) continue;
+
+      const values = extractValues(data, field);
+      if (values.length === 0) continue;
+
+      const breaks = quantileBreaks(values, NUM_CLASSES);
+      const palKey = INDICATOR_PALETTES[ind.id] ?? "teal";
+      const palette = PALETTES[palKey];
+      const expr = buildStepExpression(field, breaks, palette);
+
+      result[layer.id] = { expr, breaks, palette };
+    }
+
+    return result;
+  }, [activeFillLayers, enrichedComuni, enrichedProvince]);
+
+  // ── Interactive layer IDs (include fills for click) ────────────
+  const interactiveLayerIds = useMemo(() => {
+    const ids = [
+      "boundaries-regioni",
+      "boundaries-province",
+      "boundaries-comuni",
+      "gtfs-stops",
+    ];
+    for (const l of activeFillLayers) {
+      ids.push(`fill-${l.id}`);
+    }
+    return ids;
+  }, [activeFillLayers]);
 
   const onMoveEnd = useCallback(() => {
     const map = mapRef.current;
@@ -114,11 +237,90 @@ export default function MapView() {
       maxBounds={ITALY_BOUNDS}
       onMoveEnd={onMoveEnd}
       onClick={onClick}
-      interactiveLayerIds={INTERACTIVE_LAYER_IDS}
+      interactiveLayerIds={interactiveLayerIds}
       attributionControl={false}
     >
       <NavigationControl position="top-right" />
       <AttributionControl compact position="bottom-right" />
+
+      {/* ── Choropleth fill layers (render below lines) ─────────── */}
+
+      {/* Comunale-level fills (enriched comuni boundaries) */}
+      {enrichedComuni &&
+        activeFillLayers
+          .filter((l) => {
+            const ind = INDICATORS.find((i) => i.id === l.id);
+            return ind?.scale === "comunale";
+          })
+          .map((layer) => {
+            const expr = fillExpressions[layer.id];
+            if (!expr) return null;
+            return (
+              <Source
+                key={`fill-src-${layer.id}`}
+                id={`fill-src-${layer.id}`}
+                type="geojson"
+                data={enrichedComuni}
+              >
+                <Layer
+                  id={`fill-${layer.id}`}
+                  type="fill"
+                  paint={{
+                    "fill-color": expr.expr as unknown as string,
+                    "fill-opacity": layer.opacity * 0.85,
+                  }}
+                />
+                <Layer
+                  id={`fill-outline-${layer.id}`}
+                  type="line"
+                  paint={{
+                    "line-color": "rgba(255,255,255,0.15)",
+                    "line-width": 0.3,
+                  }}
+                  minzoom={8}
+                />
+              </Source>
+            );
+          })}
+
+      {/* Provinciale-level fills (enriched province boundaries) */}
+      {enrichedProvince &&
+        activeFillLayers
+          .filter((l) => {
+            const ind = INDICATORS.find((i) => i.id === l.id);
+            return ind?.scale === "provinciale";
+          })
+          .map((layer) => {
+            const expr = fillExpressions[layer.id];
+            if (!expr) return null;
+            return (
+              <Source
+                key={`fill-src-${layer.id}`}
+                id={`fill-src-${layer.id}`}
+                type="geojson"
+                data={enrichedProvince}
+              >
+                <Layer
+                  id={`fill-${layer.id}`}
+                  type="fill"
+                  paint={{
+                    "fill-color": expr.expr as unknown as string,
+                    "fill-opacity": layer.opacity * 0.85,
+                  }}
+                />
+                <Layer
+                  id={`fill-outline-${layer.id}`}
+                  type="line"
+                  paint={{
+                    "line-color": "rgba(255,255,255,0.25)",
+                    "line-width": 0.5,
+                  }}
+                />
+              </Source>
+            );
+          })}
+
+      {/* ── Boundary line layers (render above fills) ─────────── */}
 
       {/* Regioni */}
       {regioniData && (

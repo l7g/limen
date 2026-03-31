@@ -1,9 +1,19 @@
 import { create } from "zustand";
-import type { LayerConfig, WorkbenchState } from "./datasets/types";
+import type {
+  ChartType,
+  ChoroplethConfig,
+  LayerConfig,
+  ViewMode,
+  WorkbenchState,
+} from "./datasets/types";
 
 interface WorkbenchActions {
   toggleLayer: (layerId: string) => void;
   setLayerOpacity: (layerId: string, opacity: number) => void;
+  setChoropleth: (
+    layerId: string,
+    config: ChoroplethConfig | undefined,
+  ) => void;
   addLayer: (layer: LayerConfig) => void;
   removeLayer: (layerId: string) => void;
   setCenter: (center: [number, number]) => void;
@@ -13,6 +23,9 @@ interface WorkbenchActions {
     properties?: Record<string, unknown>,
   ) => void;
   toggleBottomPanel: () => void;
+  setViewMode: (mode: ViewMode) => void;
+  setChartType: (type: ChartType) => void;
+  applyTemplate: (templateId: string, layers: LayerConfig[]) => void;
 }
 
 /** Initial map view: centered on Italy. */
@@ -56,6 +69,30 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
         type: "fill",
       },
       {
+        id: "density",
+        datasetId: "derived-population-density",
+        label: "Densità Demografica",
+        visible: false,
+        opacity: 0.8,
+        type: "fill",
+      },
+      {
+        id: "income",
+        datasetId: "derived-income-per-capita",
+        label: "Reddito Pro Capite",
+        visible: false,
+        opacity: 0.8,
+        type: "fill",
+      },
+      {
+        id: "commuters",
+        datasetId: "derived-commuter-balance",
+        label: "Bilancio Pendolari",
+        visible: false,
+        opacity: 0.8,
+        type: "fill",
+      },
+      {
         id: "gtfs-stops",
         datasetId: "gtfs-arst",
         label: "Fermate GTFS",
@@ -66,7 +103,7 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
       {
         id: "vehicles",
         datasetId: "aci-vehicles",
-        label: "Parco Veicolare",
+        label: "Tasso Motorizzazione",
         visible: false,
         opacity: 0.8,
         type: "fill",
@@ -77,6 +114,9 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
     selectedFeatureId: null,
     selectedFeatureProperties: null,
     bottomPanelOpen: false,
+    viewMode: "map",
+    chartType: "ranking",
+    activeTemplate: null,
 
     // ── Actions ────────────────────────────────────────────
     toggleLayer: (layerId) =>
@@ -90,6 +130,13 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
       set((state) => ({
         layers: state.layers.map((l) =>
           l.id === layerId ? { ...l, opacity } : l,
+        ),
+      })),
+
+    setChoropleth: (layerId, config) =>
+      set((state) => ({
+        layers: state.layers.map((l) =>
+          l.id === layerId ? { ...l, choropleth: config } : l,
         ),
       })),
 
@@ -113,5 +160,12 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
 
     toggleBottomPanel: () =>
       set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
+
+    setViewMode: (mode) => set({ viewMode: mode }),
+
+    setChartType: (type) => set({ chartType: type }),
+
+    applyTemplate: (templateId, layers) =>
+      set({ activeTemplate: templateId, layers }),
   }),
 );

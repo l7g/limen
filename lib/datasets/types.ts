@@ -92,6 +92,12 @@ export interface ChoroplethConfig {
   legend?: string;
 }
 
+/** Workbench view mode. */
+export type ViewMode = "map" | "chart";
+
+/** Chart type for chart view. */
+export type ChartType = "ranking" | "histogram";
+
 /** Workbench state stored in Zustand. */
 export interface WorkbenchState {
   layers: LayerConfig[];
@@ -100,4 +106,7 @@ export interface WorkbenchState {
   selectedFeatureId: string | null;
   selectedFeatureProperties: Record<string, unknown> | null;
   bottomPanelOpen: boolean;
+  viewMode: ViewMode;
+  chartType: ChartType;
+  activeTemplate: string | null;
 }

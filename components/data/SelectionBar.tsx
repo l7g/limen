@@ -1,8 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { X, Download, Loader2 } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { X, Download, Loader2, Merge } from "lucide-react";
 import type { DatasetMeta } from "@/lib/datasets/types";
+import {
+  loadDataset,
+  detectJoinKeys,
+  executeMerge,
+  toCSV,
+} from "@/lib/studio/merge";
 
 interface SelectionBarProps {
   selected: DatasetMeta[];
@@ -16,6 +22,28 @@ export default function SelectionBar({
   onRemove,
 }: SelectionBarProps) {
   const [downloading, setDownloading] = useState(false);
+  const [merging, setMerging] = useState(false);
+
+  /** Merge is possible when 2+ datasets share a joinField */
+  const sharedJoinField = useMemo(() => {
+    if (selected.length < 2) return null;
+    const withJoin = selected.filter((d) => d.joinField);
+    if (withJoin.length < 2) return null;
+    // Find the most common joinField among selected datasets
+    const counts = new Map<string, number>();
+    for (const d of withJoin) {
+      counts.set(d.joinField!, (counts.get(d.joinField!) ?? 0) + 1);
+    }
+    for (const [field, count] of counts) {
+      if (count >= 2) return field;
+    }
+    return null;
+  }, [selected]);
+
+  const mergeableDatasets = useMemo(() => {
+    if (!sharedJoinField) return [];
+    return selected.filter((d) => d.joinField === sharedJoinField);
+  }, [selected, sharedJoinField]);
 
   /* Sequential file downloads */
   const handleBundle = useCallback(async () => {
@@ -32,6 +60,40 @@ export default function SelectionBar({
     }
     setDownloading(false);
   }, [selected]);
+
+  /* Merge datasets on shared join key and download CSV */
+  const handleMerge = useCallback(async () => {
+    if (!sharedJoinField || mergeableDatasets.length < 2) return;
+    setMerging(true);
+    try {
+      const loaded = await Promise.all(
+        mergeableDatasets.map((d) =>
+          loadDataset(d.id, d.name, d.filePath, d.format),
+        ),
+      );
+      // Verify the join key exists in the actual data
+      const keys = detectJoinKeys(loaded);
+      const joinKey = keys.includes(sharedJoinField)
+        ? sharedJoinField
+        : keys[0];
+      if (!joinKey) return;
+
+      const merged = executeMerge(loaded, joinKey);
+      const csv = toCSV(merged.columns, merged.rows);
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `limen-merge-${mergeableDatasets.map((d) => d.id).join("-")}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Merge failed:", err);
+    } finally {
+      setMerging(false);
+    }
+  }, [sharedJoinField, mergeableDatasets]);
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-2 sm:px-4 sm:pb-4 animate-in slide-in-from-bottom duration-200">
@@ -68,6 +130,22 @@ export default function SelectionBar({
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-2">
+            {sharedJoinField && mergeableDatasets.length >= 2 && (
+              <button
+                type="button"
+                onClick={handleMerge}
+                disabled={merging}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#00A67E] px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#00B386] disabled:opacity-50"
+              >
+                {merging ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Merge className="h-3.5 w-3.5" />
+                )}
+                Unisci ({mergeableDatasets.length})
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleBundle}

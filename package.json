@@ -6,7 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fetch:boundaries": "tsx scripts/fetch-boundaries.ts",
+    "fetch:boundaries:api": "tsx scripts/fetch-boundaries.ts --from-api",
+    "fetch:population": "tsx scripts/fetch-population.ts",
+    "fetch:demographics": "tsx scripts/fetch-demographics.ts",
+    "compute:density": "tsx scripts/compute-population-density.ts",
+    "compute:motorization": "tsx scripts/compute-motorization.ts",
+    "compute:income": "tsx scripts/compute-income-per-capita.ts",
+    "compute:commuters": "tsx scripts/compute-commuter-balance.ts",
+    "compute:emissions": "tsx scripts/compute-emissions.ts",
+    "compute:demographics": "tsx scripts/compute-demographic-indicators.ts",
+    "compute:all": "npm run compute:density && npm run compute:motorization && npm run compute:income && npm run compute:commuters && npm run compute:emissions && npm run compute:demographics",
+    "check:freshness": "tsx scripts/check-freshness.ts",
+    "check:freshness:ci": "tsx scripts/check-freshness.ts --json --strict"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

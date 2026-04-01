@@ -218,14 +218,18 @@ export default function WorkbenchPage() {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            disabled
+            title="Disponibile presto"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-500 cursor-not-allowed opacity-50"
           >
             <Upload className="h-3 w-3" />
             Carica
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            disabled
+            title="Disponibile presto"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-500 cursor-not-allowed opacity-50"
           >
             <Download className="h-3 w-3" />
             Esporta

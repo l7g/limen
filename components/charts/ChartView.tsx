@@ -38,14 +38,19 @@ function useCsvData(
   const [data, setData] = useState<DataRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!indicator) return;
     setLoading(true);
+    setError(null);
     let cancelled = false;
 
     fetch(`/data/${indicator.csv}`)
-      .then((r) => r.text())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
       .then((text) => {
         if (cancelled) return;
         const { data: rows } = Papa.parse<Record<string, string>>(text, {
@@ -74,14 +79,19 @@ function useCsvData(
         setData(parsed);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
 
     return () => {
       cancelled = true;
     };
   }, [indicator, field, geoScope]);
 
-  return { data, totalCount, loading };
+  return { data, totalCount, loading, error };
 }
 
 export default function ChartView() {
@@ -104,7 +114,7 @@ export default function ChartView() {
     : "teal";
   const palette = PALETTES[palKey];
 
-  const { data, totalCount, loading } = useCsvData(
+  const { data, totalCount, loading, error } = useCsvData(
     indicator,
     activeField,
     geoScope,
@@ -159,6 +169,19 @@ export default function ChartView() {
     return (
       <div className="flex h-full items-center justify-center text-zinc-500 text-sm">
         Caricamento dati…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-zinc-500">
+        <div className="text-center space-y-2">
+          <p className="text-sm text-red-400">
+            Errore nel caricamento dei dati
+          </p>
+          <p className="text-xs text-zinc-600">{error}</p>
+        </div>
       </div>
     );
   }
@@ -221,7 +244,7 @@ export default function ChartView() {
             <BarChart
               data={rankingData}
               layout="vertical"
-              margin={{ left: 10, right: 20, top: 5, bottom: 5 }}
+              margin={{ left: 10, right: 20, top: 5, bottom: 20 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -232,6 +255,13 @@ export default function ChartView() {
                 type="number"
                 tick={{ fill: "#71717a", fontSize: 10 }}
                 tickFormatter={(v: number) => v.toLocaleString("it-IT")}
+                label={{
+                  value: fieldDef?.unit ?? fieldDef?.label ?? activeField,
+                  position: "insideBottom",
+                  offset: -10,
+                  fill: "#71717a",
+                  fontSize: 11,
+                }}
               />
               <YAxis
                 dataKey="name"
@@ -269,7 +299,7 @@ export default function ChartView() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={histogramData}
-              margin={{ left: 10, right: 20, top: 5, bottom: 5 }}
+              margin={{ left: 10, right: 20, top: 5, bottom: 20 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -279,11 +309,26 @@ export default function ChartView() {
               <XAxis
                 dataKey="range"
                 tick={{ fill: "#71717a", fontSize: 9 }}
-                interval={1}
+                interval={Math.max(0, Math.floor(histogramData.length / 8) - 1)}
+                label={{
+                  value: fieldDef?.label ?? activeField,
+                  position: "insideBottom",
+                  offset: -10,
+                  fill: "#71717a",
+                  fontSize: 11,
+                }}
               />
               <YAxis
                 tick={{ fill: "#71717a", fontSize: 10 }}
                 tickFormatter={(v: number) => v.toLocaleString("it-IT")}
+                label={{
+                  value: "Comuni",
+                  angle: -90,
+                  position: "insideLeft",
+                  offset: 0,
+                  fill: "#71717a",
+                  fontSize: 11,
+                }}
               />
               <Tooltip
                 contentStyle={{

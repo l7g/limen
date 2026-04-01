@@ -1,0 +1,152 @@
+name: Fetch Tier 1 Data (API-Fed)
+
+# Fetches all API-sourced datasets, recomputes derived indicators, commits changes.
+#
+# Tier 1 datasets:
+#   - ISTAT population (SDMX API) — annual, published ~March
+#   - ISTAT demographics (SDMX API) — annual, published ~March
+#   - ISTAT boundaries (WFS geoserver) — annual, published ~January
+#
+# Tier 3 recomputation (if inputs changed):
+#   - population-density, motorization-rate, income-per-capita
+#   - commuter-balance, emissions, demographic-indicators
+#
+# Schedule: 15th of Feb, Mar, Apr at 06:00 UTC (catch ISTAT annual release window)
+# Also: manual trigger with selective step control
+
+on:
+  schedule:
+    - cron: "0 6 15 2-4 *"
+  workflow_dispatch:
+    inputs:
+      fetch_boundaries:
+        description: "Fetch ISTAT boundaries (WFS)"
+        type: boolean
+        default: false
+      fetch_population:
+        description: "Fetch ISTAT population (SDMX)"
+        type: boolean
+        default: true
+      fetch_demographics:
+        description: "Fetch ISTAT demographics (SDMX)"
+        type: boolean
+        default: true
+      recompute_derived:
+        description: "Recompute all Tier 3 indicators"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-fetch
+  cancel-in-progress: false
+
+jobs:
+  fetch-and-compute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      # ── Tier 1: ISTAT Boundaries (WFS) ──────────────────────────
+      # Only on manual trigger with fetch_boundaries=true, or scheduled (Jan boundaries)
+      - name: Fetch ISTAT boundaries
+        if: >
+          github.event.inputs.fetch_boundaries == 'true' ||
+          (github.event_name == 'schedule' && false)
+        run: npx tsx scripts/fetch-boundaries.ts --from-api
+        continue-on-error: true
+
+      # ── Tier 1: ISTAT Population (SDMX) ─────────────────────────
+      - name: Fetch ISTAT population
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.fetch_population == 'true'
+        run: npx tsx scripts/fetch-population.ts
+        continue-on-error: true
+
+      # ── Tier 1: ISTAT Demographics (SDMX) ───────────────────────
+      - name: Fetch ISTAT demographics
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.fetch_demographics == 'true'
+        run: npx tsx scripts/fetch-demographics.ts
+        continue-on-error: true
+
+      # ── Tier 3: Recompute all derived indicators ─────────────────
+      # Runs after fetches — uses whatever data is available (new or existing)
+      - name: Compute population density
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.recompute_derived == 'true'
+        run: npx tsx scripts/compute-population-density.ts
+        continue-on-error: true
+
+      - name: Compute motorization rate
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.recompute_derived == 'true'
+        run: npx tsx scripts/compute-motorization.ts
+        continue-on-error: true
+
+      - name: Compute income per capita
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.recompute_derived == 'true'
+        run: npx tsx scripts/compute-income-per-capita.ts
+        continue-on-error: true
+
+      - name: Compute commuter balance
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.recompute_derived == 'true'
+        run: npx tsx scripts/compute-commuter-balance.ts
+        continue-on-error: true
+
+      - name: Compute emissions
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.recompute_derived == 'true'
+        run: npx tsx scripts/compute-emissions.ts
+        continue-on-error: true
+
+      - name: Compute demographic indicators
+        if: >
+          github.event_name == 'schedule' ||
+          github.event.inputs.recompute_derived == 'true'
+        run: npx tsx scripts/compute-demographic-indicators.ts
+        continue-on-error: true
+
+      # ── Commit results ───────────────────────────────────────────
+      - name: Check for changes
+        id: changes
+        run: |
+          git add -A public/data/
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "### Changed files:" >> $GITHUB_STEP_SUMMARY
+            git diff --cached --name-only >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Commit updated data
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "data: auto-update $(date +%Y-%m-%d)
+
+          Tier 1 fetch + Tier 3 recomputation via GitHub Actions.
+          Triggered by: ${{ github.event_name }}"
+          git push

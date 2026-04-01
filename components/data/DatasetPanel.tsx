@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { DatasetMeta } from "@/lib/datasets/types";
+import { useWorkbenchStore } from "@/lib/store";
 import { daysSinceUpdate } from "@/lib/datasets/freshness";
 import {
   loadDataset,
@@ -89,6 +90,11 @@ export default function DatasetPanel({ dataset, onClose }: DatasetPanelProps) {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+
+  /** Check if the workbench has a layer for this dataset */
+  const hasWorkbenchLayer = useWorkbenchStore((s) =>
+    s.layers.some((l) => l.datasetId === dataset.id),
+  );
 
   /* Load data */
   useEffect(() => {
@@ -455,8 +461,8 @@ export default function DatasetPanel({ dataset, onClose }: DatasetPanelProps) {
             Dettaglio
           </Link>
 
-          {/* Workbench link — only for spatial data */}
-          {dataset.geometryType && dataset.geometryType !== "none" && (
+          {/* Workbench link — only for datasets with a matching layer */}
+          {hasWorkbenchLayer && (
             <Link
               href={`/workbench?layer=${dataset.id}`}
               className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-[12px] font-medium text-gray-700 transition-colors hover:bg-gray-50"

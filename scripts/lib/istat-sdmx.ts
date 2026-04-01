@@ -46,35 +46,73 @@ async function enforceRateLimit(): Promise<void> {
   lastRequestTime = Date.now();
 }
 
+const TIMEOUT_MS = 120_000; // 2 min per request (ISTAT is slow)
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 30_000; // 30s between retries
+
 /**
  * Fetch CSV data from the ISTAT SDMX REST API.
- * Enforces rate limiting automatically.
+ * Enforces rate limiting, has a 2-min timeout, and retries up to 3 times.
  */
 export async function fetchSdmxCsv(query: SdmxQuery): Promise<string> {
-  await enforceRateLimit();
-
   const url = new URL(`${BASE_URL}/${query.dataflowId}/${query.key}`);
   if (query.startPeriod) url.searchParams.set("startPeriod", query.startPeriod);
   if (query.lastNObservations)
     url.searchParams.set("lastNObservations", String(query.lastNObservations));
 
-  console.log(`  GET ${url.toString()}`);
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      Accept: CSV_ACCEPT,
-      "Accept-Language": "it",
-    },
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(
-      `SDMX API ${response.status} ${response.statusText}\n  URL: ${url}\n  Body: ${body.slice(0, 300)}`,
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    await enforceRateLimit();
+    console.log(
+      `  GET ${url.toString()}${attempt > 1 ? ` (retry ${attempt}/${MAX_RETRIES})` : ""}`,
     );
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {
+          Accept: CSV_ACCEPT,
+          "Accept-Language": "it",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      if (response.status === 500 && attempt < MAX_RETRIES) {
+        console.log(
+          `  ⚠ Server error 500 — retrying in ${RETRY_DELAY_MS / 1000}s...`,
+        );
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        continue;
+      }
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        throw new Error(
+          `SDMX API ${response.status} ${response.statusText}\n  URL: ${url}\n  Body: ${body.slice(0, 300)}`,
+        );
+      }
+
+      return await response.text();
+    } catch (err: unknown) {
+      clearTimeout(timer);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        (msg.includes("abort") || msg.includes("fetch failed")) &&
+        attempt < MAX_RETRIES
+      ) {
+        console.log(
+          `  ⚠ Timeout/network error — retrying in ${RETRY_DELAY_MS / 1000}s...`,
+        );
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        continue;
+      }
+      throw new Error(`SDMX fetch failed after ${attempt} attempts: ${msg}`);
+    }
   }
 
-  return response.text();
+  throw new Error("SDMX fetch failed: exhausted retries");
 }
 
 /**

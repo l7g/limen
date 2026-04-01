@@ -91,6 +91,39 @@ export const INDICATORS: IndicatorDef[] = [
     ],
     defaultField: "veicoli_per_1000",
   },
+  {
+    id: "emissions",
+    label: "Emissioni Veicolari",
+    csv: "derived/emissions-by-province.csv",
+    joinKey: "COD_PROV",
+    scale: "provinciale",
+    fields: [
+      { key: "co2_tonnellate_anno", label: "CO₂", unit: "t/anno" },
+      { key: "nox_kg_anno", label: "NOx", unit: "kg/anno" },
+      { key: "pm25_kg_anno", label: "PM2.5", unit: "kg/anno" },
+      { key: "co2_per_veicolo_kg", label: "CO₂ per veicolo", unit: "kg" },
+    ],
+    defaultField: "co2_tonnellate_anno",
+  },
+  {
+    id: "demographics",
+    label: "Indicatori Demografici",
+    csv: "derived/demographic-indicators.csv",
+    joinKey: "PRO_COM_T",
+    scale: "comunale",
+    fields: [
+      { key: "indice_vecchiaia", label: "Indice di vecchiaia", unit: "%" },
+      { key: "indice_dipendenza", label: "Indice di dipendenza", unit: "%" },
+      { key: "pct_giovani", label: "% Giovani (0-14)", unit: "%" },
+      { key: "pct_anziani", label: "% Anziani (65+)", unit: "%" },
+      {
+        key: "rapporto_mascolinita",
+        label: "Rapporto mascolinit\u00e0",
+        unit: "%",
+      },
+    ],
+    defaultField: "indice_vecchiaia",
+  },
 ];
 
 // ── CSV Cache ──────────────────────────────────────────────────────
@@ -216,6 +249,8 @@ export const INDICATOR_PALETTES: Record<string, PaletteKey> = {
   income: "blue",
   commuters: "diverging",
   vehicles: "purple",
+  emissions: "red",
+  demographics: "orange",
 };
 
 /**

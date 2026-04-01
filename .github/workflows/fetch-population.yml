@@ -1,43 +1,22 @@
-name: Fetch ISTAT Population (SDMX API)
+name: "(Deprecated) Fetch ISTAT Population"
 
-# Annual population update — ISTAT publishes Jan 1st data around March.
-# Runs monthly Feb–Apr to catch the release, then stops until next year.
+# DEPRECATED — Superseded by fetch-tier1.yml which handles all Tier 1 data.
+# Keeping this file to avoid breaking any existing references.
+# Use fetch-tier1.yml or manual trigger with fetch_population=true instead.
 
 on:
-  schedule:
-    # At 06:00 UTC on the 15th of Feb, Mar, Apr
-    - cron: "0 6 15 2-4 *"
-  workflow_dispatch: # Manual trigger
-
-permissions:
-  contents: write
+  workflow_dispatch:
+    inputs:
+      note:
+        description: "This workflow is deprecated. Use fetch-tier1.yml instead."
+        type: string
+        default: "Use fetch-tier1.yml"
 
 jobs:
-  fetch-population:
+  redirect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-
-      - run: npm ci
-
-      - name: Fetch population from ISTAT SDMX API
-        run: npx tsx scripts/fetch-population.ts
-
-      - name: Check for changes
-        id: changes
-        run: |
-          git diff --quiet public/data/population/comuni-population.csv && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
-
-      - name: Commit updated population data
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/population/comuni-population.csv
-          git commit -m "data: update ISTAT population $(date +%Y-%m-%d)"
-          git push
+      - run: |
+          echo "⚠️ This workflow is deprecated."
+          echo "Use 'Fetch Tier 1 Data (API-Fed)' workflow instead."
+          echo "It fetches population + demographics + boundaries + recomputes derived indicators."

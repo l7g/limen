@@ -1,0 +1,232 @@
+{
+  "generatedAt": "2026-04-01T14:45:30.416Z",
+  "summary": {
+    "current": 17,
+    "expiring": 0,
+    "stale": 3,
+    "error": 0
+  },
+  "total": 20,
+  "datasets": [
+    {
+      "id": "istat-boundaries-comuni",
+      "name": "Confini Comunali",
+      "tier": 1,
+      "status": "stale",
+      "ageDays": 455,
+      "untilDays": -90,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2025-01-01"
+    },
+    {
+      "id": "istat-boundaries-province",
+      "name": "Confini Provinciali",
+      "tier": 1,
+      "status": "stale",
+      "ageDays": 455,
+      "untilDays": -90,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2025-01-01"
+    },
+    {
+      "id": "istat-boundaries-regioni",
+      "name": "Confini Regionali",
+      "tier": 1,
+      "status": "stale",
+      "ageDays": 455,
+      "untilDays": -90,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2025-01-01"
+    },
+    {
+      "id": "istat-population",
+      "name": "Popolazione Residente per Comune",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 4,
+      "untilDays": 334,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-03-28"
+    },
+    {
+      "id": "gtfs-arst",
+      "name": "ARST — Autobus Regionali Sardegna",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 68,
+      "untilDays": null,
+      "coverage": "sardinia",
+      "cadence": "quarterly",
+      "lastUpdated": "2026-01-23"
+    },
+    {
+      "id": "gtfs-ctm",
+      "name": "CTM — Trasporto Urbano Cagliari",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 68,
+      "untilDays": null,
+      "coverage": "sardinia",
+      "cadence": "quarterly",
+      "lastUpdated": "2026-01-23"
+    },
+    {
+      "id": "gtfs-atp-sassari",
+      "name": "ATP — Trasporto Urbano Sassari",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 68,
+      "untilDays": null,
+      "coverage": "sardinia",
+      "cadence": "quarterly",
+      "lastUpdated": "2026-01-23"
+    },
+    {
+      "id": "gtfs-atp-nuoro",
+      "name": "ATP — Trasporto Urbano Nuoro",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 68,
+      "untilDays": null,
+      "coverage": "sardinia",
+      "cadence": "quarterly",
+      "lastUpdated": "2026-01-23"
+    },
+    {
+      "id": "gtfs-aspo",
+      "name": "ASPO — Trasporto Urbano Olbia",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 68,
+      "untilDays": null,
+      "coverage": "sardinia",
+      "cadence": "quarterly",
+      "lastUpdated": "2026-01-23"
+    },
+    {
+      "id": "gtfs-trenitalia",
+      "name": "Trenitalia — Ferrovie Sardegna",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 68,
+      "untilDays": null,
+      "coverage": "sardinia",
+      "cadence": "quarterly",
+      "lastUpdated": "2026-01-23"
+    },
+    {
+      "id": "aci-vehicles",
+      "name": "Parco Veicolare Provinciale",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 4,
+      "untilDays": 426,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-03-28"
+    },
+    {
+      "id": "istat-pendolarismo",
+      "name": "Matrice del Pendolarismo",
+      "tier": 2,
+      "status": "current",
+      "ageDays": 852,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "decennial",
+      "lastUpdated": "2023-12-01"
+    },
+    {
+      "id": "mef-income",
+      "name": "Redditi per Comune",
+      "tier": 2,
+      "status": "current",
+      "ageDays": 4,
+      "untilDays": 365,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-03-28"
+    },
+    {
+      "id": "istat-demographics",
+      "name": "Struttura Demografica per Comune",
+      "tier": 1,
+      "status": "current",
+      "ageDays": 0,
+      "untilDays": 275,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-04-01"
+    },
+    {
+      "id": "derived-motorization",
+      "name": "Tasso di Motorizzazione",
+      "tier": 3,
+      "status": "current",
+      "ageDays": 4,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-03-28"
+    },
+    {
+      "id": "derived-income-per-capita",
+      "name": "Reddito Pro Capite per Comune",
+      "tier": 3,
+      "status": "current",
+      "ageDays": 1,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-03-31"
+    },
+    {
+      "id": "derived-population-density",
+      "name": "Densità Abitativa per Comune",
+      "tier": 3,
+      "status": "current",
+      "ageDays": 1,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-03-31"
+    },
+    {
+      "id": "derived-commuter-balance",
+      "name": "Bilancio Pendolari per Comune",
+      "tier": 3,
+      "status": "current",
+      "ageDays": 1,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "decennial",
+      "lastUpdated": "2026-03-31"
+    },
+    {
+      "id": "derived-emissions",
+      "name": "Emissioni Veicolari Stimate per Provincia",
+      "tier": 3,
+      "status": "current",
+      "ageDays": 0,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-04-01"
+    },
+    {
+      "id": "derived-demographic-indicators",
+      "name": "Indicatori Demografici per Comune",
+      "tier": 3,
+      "status": "current",
+      "ageDays": 0,
+      "untilDays": null,
+      "coverage": "italy",
+      "cadence": "annual",
+      "lastUpdated": "2026-04-01"
+    }
+  ]
+}

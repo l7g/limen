@@ -72,6 +72,92 @@ export async function loadDataset(
   throw new Error(`Unsupported format: ${format}`);
 }
 
+/* ── Join-key detection ── */
+
+/**
+ * Detect shared join keys across multiple datasets.
+ * Returns e.g. ["PRO_COM_T"] if all datasets share that column.
+ */
+export function detectJoinKeys(datasets: ParsedDataset[]): string[] {
+  if (datasets.length < 2) return [];
+  const columnSets = datasets.map((d) => new Set(d.columns));
+  const shared = datasets[0].columns.filter((col) =>
+    columnSets.every((s) => s.has(col)),
+  );
+  // Prefer known ISTAT join keys
+  const preferred = ["PRO_COM_T", "COD_PROV", "COD_REG"];
+  const sorted = [
+    ...shared.filter((k) => preferred.includes(k)),
+    ...shared.filter((k) => !preferred.includes(k)),
+  ];
+  return sorted;
+}
+
+/* ── Merge execution ── */
+
+/**
+ * Chained left-join: merge N datasets on a common key.
+ * First dataset is the base; subsequent datasets are joined onto it.
+ */
+export function executeMerge(
+  datasets: ParsedDataset[],
+  joinKey: string,
+): ParsedDataset {
+  if (datasets.length === 0) throw new Error("No datasets to merge");
+  if (datasets.length === 1) return datasets[0];
+
+  let baseRows = datasets[0].rows.map((r) => ({ ...r }));
+  let baseColumns = [...datasets[0].columns];
+
+  for (let i = 1; i < datasets.length; i++) {
+    const right = datasets[i];
+    // Build lookup by join key
+    const lookup = new Map<string, DataRow>();
+    for (const row of right.rows) {
+      const key = String(row[joinKey] ?? "");
+      if (key) lookup.set(key, row);
+    }
+
+    // Add columns from right (skip duplicates and the join key)
+    const newCols = right.columns.filter(
+      (c) => c !== joinKey && !baseColumns.includes(c),
+    );
+    // Suffix duplicates that aren't the join key
+    const renamedCols: { orig: string; dest: string }[] = [];
+    for (const col of right.columns) {
+      if (col === joinKey) continue;
+      if (baseColumns.includes(col)) {
+        const dest = `${col}_${right.id}`;
+        renamedCols.push({ orig: col, dest });
+        if (!baseColumns.includes(dest)) baseColumns.push(dest);
+      } else {
+        renamedCols.push({ orig: col, dest: col });
+        baseColumns.push(col);
+      }
+    }
+
+    // Join
+    baseRows = baseRows.map((row) => {
+      const key = String(row[joinKey] ?? "");
+      const match = lookup.get(key);
+      const merged = { ...row };
+      for (const { orig, dest } of renamedCols) {
+        merged[dest] = match ? (match[orig] ?? null) : null;
+      }
+      return merged;
+    });
+  }
+
+  return {
+    id: datasets.map((d) => d.id).join("+"),
+    name: datasets.map((d) => d.name).join(" + "),
+    columns: baseColumns,
+    rows: baseRows,
+    rowCount: baseRows.length,
+    format: "csv",
+  };
+}
+
 /* ── CSV export ── */
 
 export function toCSV(columns: string[], rows: DataRow[]): string {

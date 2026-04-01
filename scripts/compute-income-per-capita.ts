@@ -72,7 +72,7 @@ function main() {
 
   // Compute
   const header =
-    "PRO_COM_T,comune,sigla_provincia,regione,popolazione,contribuenti,reddito_complessivo,reddito_pro_capite,reddito_medio_contribuente,pressione_fiscale";
+    "PRO_COM_T,COD_PROV,comune,sigla_provincia,regione,popolazione,contribuenti,reddito_complessivo,reddito_pro_capite,reddito_medio_contribuente,pressione_fiscale";
   const lines: string[] = [];
   let matched = 0;
   let unmatched = 0;
@@ -100,6 +100,7 @@ function main() {
     lines.push(
       [
         key,
+        key.slice(0, 3),
         `"${r.comune}"`,
         r.sigla_provincia,
         `"${r.regione}"`,

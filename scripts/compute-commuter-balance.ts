@@ -89,7 +89,7 @@ function main() {
   console.log(`Computing balance for ${allComuni.size} comuni`);
 
   const header =
-    "PRO_COM_T,popolazione,pendolari_in_entrata,pendolari_in_uscita,pendolari_interni,bilancio_pendolari,bilancio_per_1000";
+    "PRO_COM_T,COD_PROV,popolazione,pendolari_in_entrata,pendolari_in_uscita,pendolari_interni,bilancio_pendolari,bilancio_per_1000";
   const lines: string[] = [];
 
   for (const key of allComuni) {
@@ -100,7 +100,11 @@ function main() {
     const pop = popMap.get(key) ?? 0;
     const balancePer1000 = pop > 0 ? Math.round((balance / pop) * 1000) : 0;
 
-    lines.push([key, pop, inc, out, int, balance, balancePer1000].join(","));
+    lines.push(
+      [key, key.slice(0, 3), pop, inc, out, int, balance, balancePer1000].join(
+        ",",
+      ),
+    );
   }
 
   lines.sort((a, b) => a.localeCompare(b));

@@ -119,7 +119,7 @@ function main() {
 
   // Compute density
   const header =
-    "PRO_COM_T,comune,provincia,regione,popolazione,area_km2,densita_ab_km2";
+    "PRO_COM_T,COD_PROV,comune,provincia,regione,popolazione,area_km2,densita_ab_km2";
   const lines: string[] = [];
   let matched = 0;
 
@@ -132,6 +132,7 @@ function main() {
     lines.push(
       [
         key,
+        key.slice(0, 3),
         `"${info.nome}"`,
         `"${info.provincia}"`,
         `"${info.regione}"`,

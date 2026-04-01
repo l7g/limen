@@ -55,10 +55,13 @@ async function main() {
     process.exit(1);
   }
 
-  // Build output CSV
-  const header = "codice_comune,anno,popolazione";
+  // Build output CSV — include COD_PROV for cross-scale merging
+  const header = "codice_comune,COD_PROV,anno,popolazione";
   const lines = comuni
-    .map((r) => `${r.REF_AREA},${r.TIME_PERIOD},${r.OBS_VALUE}`)
+    .map(
+      (r) =>
+        `${r.REF_AREA},${r.REF_AREA.slice(0, 3)},${r.TIME_PERIOD},${r.OBS_VALUE}`,
+    )
     .sort();
 
   const output = [header, ...lines].join("\n");

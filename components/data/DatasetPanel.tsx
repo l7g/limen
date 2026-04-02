@@ -99,7 +99,7 @@ export default function DatasetPanel({ dataset, onClose }: DatasetPanelProps) {
   /* Load data */
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect
     setError(null);
     setParsed(null);
     setShowTable(false);
@@ -189,8 +189,6 @@ export default function DatasetPanel({ dataset, onClose }: DatasetPanelProps) {
     downloadBlob(json, `${safeName}.json`, "application/json");
     setDownloadOpen(false);
   }, [parsed, dataset.name]);
-
-  const ageDays = daysSinceUpdate(dataset);
 
   return (
     <>

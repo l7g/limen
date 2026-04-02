@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type {
-  BoundaryLayer,
   ChartType,
   GeoScope,
   LegendData,

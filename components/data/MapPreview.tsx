@@ -38,7 +38,7 @@ export default function MapPreview({
 
   useEffect(() => {
     let cancelled = false;
-    setGeojson(null);
+    setGeojson(null); // eslint-disable-line react-hooks/set-state-in-effect
     setError(false);
     fetch(dataUrl)
       .then((r) => {

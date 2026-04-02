@@ -13,5 +13,7 @@ declare module "mapshaper" {
     commands: string,
     input?: Record<string, unknown>,
   ): Promise<ApplyCommandsOutput>;
-  export default { applyCommands };
+  export { applyCommands };
+  const _default: { applyCommands: typeof applyCommands };
+  export default _default;
 }

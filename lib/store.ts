@@ -1,134 +1,70 @@
 import { create } from "zustand";
 import type {
+  BoundaryLayer,
   ChartType,
-  ChoroplethConfig,
   GeoScope,
-  LayerConfig,
   LegendData,
   ViewMode,
+  WorkbenchDataset,
   WorkbenchState,
 } from "./datasets/types";
+import type { PaletteKey } from "./workbench/choropleth";
 
 interface WorkbenchActions {
-  toggleLayer: (layerId: string) => void;
-  setLayerOpacity: (layerId: string, opacity: number) => void;
-  setChoropleth: (
-    layerId: string,
-    config: ChoroplethConfig | undefined,
-  ) => void;
-  addLayer: (layer: LayerConfig) => void;
-  removeLayer: (layerId: string) => void;
+  // Dataset management
+  addDataset: (dataset: WorkbenchDataset) => void;
+  removeDataset: (id: string) => void;
+  setActiveDataset: (id: string | null) => void;
+  setDatasetField: (id: string, field: string) => void;
+  setDatasetPalette: (id: string, palette: PaletteKey) => void;
+  setDatasetOpacity: (id: string, opacity: number) => void;
+
+  // Boundary layers
+  toggleBoundary: (id: string) => void;
+  setBoundaryOpacity: (id: string, opacity: number) => void;
+
+  // Map state
   setCenter: (center: [number, number]) => void;
   setZoom: (zoom: number) => void;
   selectFeature: (
     featureId: string | null,
     properties?: Record<string, unknown>,
   ) => void;
+
+  // UI state
   toggleBottomPanel: () => void;
   setViewMode: (mode: ViewMode) => void;
   setChartType: (type: ChartType) => void;
-  applyTemplate: (templateId: string, layers: LayerConfig[]) => void;
   setGeoScope: (scope: GeoScope | null) => void;
   setActiveLegend: (legend: LegendData | null) => void;
 }
 
 /** Initial map view: centered on Italy. */
 const INITIAL_CENTER: [number, number] = [12.5, 41.9];
-const INITIAL_ZOOM = 5.5;
+const INITIAL_ZOOM = 5.0;
 
 export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
   (set) => ({
     // ── State ──────────────────────────────────────────────
-    layers: [
+    datasets: [],
+    activeDatasetId: null,
+
+    boundaries: [
       {
-        id: "boundaries-regioni",
-        datasetId: "istat-boundaries-regioni",
+        id: "regioni",
         label: "Confini Regionali",
         visible: true,
         opacity: 0.6,
-        type: "line",
       },
       {
-        id: "boundaries-province",
-        datasetId: "istat-boundaries-province",
+        id: "province",
         label: "Confini Provinciali",
         visible: true,
         opacity: 0.4,
-        type: "line",
       },
-      {
-        id: "boundaries-comuni",
-        datasetId: "istat-boundaries-comuni",
-        label: "Confini Comunali",
-        visible: false,
-        opacity: 0.3,
-        type: "line",
-      },
-      {
-        id: "population",
-        datasetId: "istat-population",
-        label: "Popolazione",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
-      {
-        id: "density",
-        datasetId: "derived-population-density",
-        label: "Densità Demografica",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
-      {
-        id: "income",
-        datasetId: "derived-income-per-capita",
-        label: "Reddito Pro Capite",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
-      {
-        id: "commuters",
-        datasetId: "derived-commuter-balance",
-        label: "Bilancio Pendolari",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
-      {
-        id: "gtfs-stops",
-        datasetId: "gtfs-arst",
-        label: "Fermate GTFS",
-        visible: false,
-        opacity: 0.9,
-        type: "circle",
-      },
-      {
-        id: "vehicles",
-        datasetId: "aci-vehicles",
-        label: "Tasso Motorizzazione",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
-      {
-        id: "emissions",
-        datasetId: "derived-emissions",
-        label: "Emissioni Veicolari",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
-      {
-        id: "demographics",
-        datasetId: "derived-demographic-indicators",
-        label: "Indicatori Demografici",
-        visible: false,
-        opacity: 0.8,
-        type: "fill",
-      },
+      { id: "comuni", label: "Confini Comunali", visible: false, opacity: 0.3 },
     ],
+
     center: INITIAL_CENTER,
     zoom: INITIAL_ZOOM,
     selectedFeatureId: null,
@@ -136,41 +72,69 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
     bottomPanelOpen: false,
     viewMode: "map",
     chartType: "ranking",
-    activeTemplate: null,
     geoScope: null,
     activeLegend: null,
 
-    // ── Actions ────────────────────────────────────────────
-    toggleLayer: (layerId) =>
+    // ── Dataset actions ────────────────────────────────────
+    addDataset: (dataset) =>
       set((state) => ({
-        layers: state.layers.map((l) =>
-          l.id === layerId ? { ...l, visible: !l.visible } : l,
+        datasets: [...state.datasets, dataset],
+        activeDatasetId:
+          state.datasets.length === 0 ? dataset.id : state.activeDatasetId,
+      })),
+
+    removeDataset: (id) =>
+      set((state) => {
+        const remaining = state.datasets.filter((d) => d.id !== id);
+        return {
+          datasets: remaining,
+          activeDatasetId:
+            state.activeDatasetId === id
+              ? (remaining[0]?.id ?? null)
+              : state.activeDatasetId,
+        };
+      }),
+
+    setActiveDataset: (id) => set({ activeDatasetId: id }),
+
+    setDatasetField: (id, field) =>
+      set((state) => ({
+        datasets: state.datasets.map((d) =>
+          d.id === id ? { ...d, activeField: field } : d,
         ),
       })),
 
-    setLayerOpacity: (layerId, opacity) =>
+    setDatasetPalette: (id, palette) =>
       set((state) => ({
-        layers: state.layers.map((l) =>
-          l.id === layerId ? { ...l, opacity } : l,
+        datasets: state.datasets.map((d) =>
+          d.id === id ? { ...d, palette } : d,
         ),
       })),
 
-    setChoropleth: (layerId, config) =>
+    setDatasetOpacity: (id, opacity) =>
       set((state) => ({
-        layers: state.layers.map((l) =>
-          l.id === layerId ? { ...l, choropleth: config } : l,
+        datasets: state.datasets.map((d) =>
+          d.id === id ? { ...d, opacity } : d,
         ),
       })),
 
-    addLayer: (layer) => set((state) => ({ layers: [...state.layers, layer] })),
-
-    removeLayer: (layerId) =>
+    // ── Boundary actions ───────────────────────────────────
+    toggleBoundary: (id) =>
       set((state) => ({
-        layers: state.layers.filter((l) => l.id !== layerId),
+        boundaries: state.boundaries.map((b) =>
+          b.id === id ? { ...b, visible: !b.visible } : b,
+        ),
       })),
 
+    setBoundaryOpacity: (id, opacity) =>
+      set((state) => ({
+        boundaries: state.boundaries.map((b) =>
+          b.id === id ? { ...b, opacity } : b,
+        ),
+      })),
+
+    // ── Map actions ────────────────────────────────────────
     setCenter: (center) => set({ center }),
-
     setZoom: (zoom) => set({ zoom }),
 
     selectFeature: (featureId, properties) =>
@@ -180,18 +144,13 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
         bottomPanelOpen: featureId !== null,
       }),
 
+    // ── UI actions ─────────────────────────────────────────
     toggleBottomPanel: () =>
       set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
 
     setViewMode: (mode) => set({ viewMode: mode }),
-
     setChartType: (type) => set({ chartType: type }),
-
     setGeoScope: (scope) => set({ geoScope: scope }),
-
     setActiveLegend: (legend) => set({ activeLegend: legend }),
-
-    applyTemplate: (templateId, layers) =>
-      set({ activeTemplate: templateId, layers }),
   }),
 );

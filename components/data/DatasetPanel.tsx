@@ -91,9 +91,9 @@ export default function DatasetPanel({ dataset, onClose }: DatasetPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
 
-  /** Check if the workbench has a layer for this dataset */
+  /** Check if the workbench has a dataset for this item */
   const hasWorkbenchLayer = useWorkbenchStore((s) =>
-    s.layers.some((l) => l.datasetId === dataset.id),
+    s.datasets.some((d) => d.datasetId === dataset.id),
   );
 
   /* Load data */

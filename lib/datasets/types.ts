@@ -92,6 +92,29 @@ export interface ChoroplethConfig {
   legend?: string;
 }
 
+/** A dataset added to the workbench by the user. */
+export interface WorkbenchDataset {
+  /** Unique instance id (dataset may be added multiple times with different fields). */
+  id: string;
+  /** Catalog dataset id. */
+  datasetId: string;
+  label: string;
+  /** CSV path relative to /data/ */
+  csvPath: string;
+  /** Column used to join CSV rows to GeoJSON boundaries. */
+  joinKey: string;
+  /** Boundary scale this dataset joins to. */
+  scale: "comunale" | "provinciale";
+  /** All detected numeric columns from the CSV. */
+  numericFields: { key: string; label: string; unit?: string }[];
+  /** Currently selected field for visualization. */
+  activeField: string;
+  /** Color palette key. */
+  palette: import("../workbench/choropleth").PaletteKey;
+  /** Opacity 0–1. */
+  opacity: number;
+}
+
 /** Workbench view mode. */
 export type ViewMode = "map" | "chart";
 
@@ -114,9 +137,22 @@ export interface LegendData {
   palette: readonly string[];
 }
 
+/** Static boundary layer config (regioni/province/comuni lines). */
+export interface BoundaryLayer {
+  id: string;
+  label: string;
+  visible: boolean;
+  opacity: number;
+}
+
 /** Workbench state stored in Zustand. */
 export interface WorkbenchState {
-  layers: LayerConfig[];
+  /** User-added datasets (the workspace). */
+  datasets: WorkbenchDataset[];
+  /** Which dataset is currently active (rendered on map + chart). Null = none. */
+  activeDatasetId: string | null;
+  /** Static boundary line layers. */
+  boundaries: BoundaryLayer[];
   center: [number, number];
   zoom: number;
   selectedFeatureId: string | null;
@@ -124,7 +160,6 @@ export interface WorkbenchState {
   bottomPanelOpen: boolean;
   viewMode: ViewMode;
   chartType: ChartType;
-  activeTemplate: string | null;
   geoScope: GeoScope | null;
   activeLegend: LegendData | null;
 }

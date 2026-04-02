@@ -14,7 +14,6 @@ import {
 import { useWorkbenchStore } from "@/lib/store";
 import {
   INDICATORS,
-  INDICATOR_PALETTES,
   PALETTES,
   type IndicatorDef,
 } from "@/lib/workbench/choropleth";
@@ -95,24 +94,21 @@ function useCsvData(
 }
 
 export default function ChartView() {
-  const layers = useWorkbenchStore((s) => s.layers);
+  const datasets = useWorkbenchStore((s) => s.datasets);
+  const activeDatasetId = useWorkbenchStore((s) => s.activeDatasetId);
   const chartType = useWorkbenchStore((s) => s.chartType);
   const setChartType = useWorkbenchStore((s) => s.setChartType);
   const geoScope = useWorkbenchStore((s) => s.geoScope);
 
-  // Find first active fill layer
-  const activeLayer = layers.find((l) => l.type === "fill" && l.visible);
-  const indicator = activeLayer
-    ? INDICATORS.find((i) => i.id === activeLayer.id)
+  // Find active dataset + its indicator
+  const activeDs = datasets.find((d) => d.id === activeDatasetId) ?? null;
+  const indicator = activeDs
+    ? INDICATORS.find((i) => i.id === activeDs.datasetId)
     : undefined;
-  const activeField =
-    activeLayer?.choropleth?.field ?? indicator?.defaultField ?? "";
+  const activeField = activeDs?.activeField ?? indicator?.defaultField ?? "";
 
   const fieldDef = indicator?.fields.find((f) => f.key === activeField);
-  const palKey = indicator
-    ? (INDICATOR_PALETTES[indicator.id] ?? "teal")
-    : "teal";
-  const palette = PALETTES[palKey];
+  const palette = activeDs ? PALETTES[activeDs.palette] : PALETTES.teal;
 
   const { data, totalCount, loading, error } = useCsvData(
     indicator,
@@ -152,13 +148,13 @@ export default function ChartView() {
     return bins;
   }, [data, chartType]);
 
-  if (!activeLayer || !indicator) {
+  if (!activeDs || !indicator) {
     return (
       <div className="flex h-full items-center justify-center text-zinc-500">
         <div className="text-center space-y-2">
           <BarChart3 className="h-8 w-8 mx-auto text-zinc-600" />
           <p className="text-sm">
-            Attiva un indicatore nel pannello layer per visualizzare i grafici.
+            Aggiungi un dataset per visualizzare i grafici.
           </p>
         </div>
       </div>

@@ -1,20 +1,20 @@
 "use client";
 
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Upload,
-  Download,
-  Eye,
+  Camera,
   MapIcon,
   BarChart3,
   ChevronDown,
   Globe,
   X,
-  Layers,
+  Plus,
+  Trash2,
+  Palette,
 } from "lucide-react";
 import { useWorkbenchStore } from "@/lib/store";
 import {
@@ -22,10 +22,16 @@ import {
   INDICATOR_PALETTES,
   PALETTES,
 } from "@/lib/workbench/choropleth";
-import { TEMPLATES, buildTemplateLayers } from "@/lib/workbench/templates";
+import type { PaletteKey } from "@/lib/workbench/choropleth";
+import {
+  TEMPLATES,
+  datasetFromTemplate,
+  datasetFromIndicator,
+} from "@/lib/workbench/templates";
 import type { WorkbenchTemplate } from "@/lib/workbench/templates";
-import { REGIONS } from "@/lib/workbench/geo-scope";
-import type { GeoScope } from "@/lib/datasets/types";
+import { REGIONS, PROVINCES } from "@/lib/workbench/geo-scope";
+import type { WorkbenchDataset } from "@/lib/datasets/types";
+import { datasets as catalogDatasets } from "@/lib/datasets/catalog";
 
 /** Dynamic import — MapLibre needs DOM + WebGL, must never SSR. */
 const MapView = dynamic(() => import("@/components/map/MapView"), {
@@ -46,68 +52,64 @@ const ChartView = dynamic(() => import("@/components/charts/ChartView"), {
   ),
 });
 
+const PALETTE_OPTIONS: { key: PaletteKey; label: string }[] = [
+  { key: "teal", label: "Verde" },
+  { key: "blue", label: "Blu" },
+  { key: "purple", label: "Viola" },
+  { key: "orange", label: "Arancio" },
+  { key: "red", label: "Rosso" },
+  { key: "diverging", label: "Divergente" },
+];
+
 /**
- * Reads ?layer= param on mount to auto-enable a layer from catalog links.
+ * Reads ?layer= param on mount to auto-add a dataset from catalog links.
  */
 function LayerParamSync() {
   const searchParams = useSearchParams();
-  const layers = useWorkbenchStore((s) => s.layers);
-  const toggleLayer = useWorkbenchStore((s) => s.toggleLayer);
+  const datasets = useWorkbenchStore((s) => s.datasets);
+  const addDataset = useWorkbenchStore((s) => s.addDataset);
 
   useEffect(() => {
     const layerParam = searchParams.get("layer");
     if (!layerParam) return;
-    const target = layers.find((l) => l.datasetId === layerParam);
-    if (target && !target.visible) toggleLayer(target.id);
+    // Don't add if already present
+    if (datasets.some((d) => d.datasetId === layerParam)) return;
+    const ds = datasetFromIndicator(layerParam);
+    if (ds) addDataset(ds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null;
 }
 
-/** Field selector for choropleth layers. */
-function FieldSelector({ layerId }: { layerId: string }) {
-  const layer = useWorkbenchStore((s) =>
-    s.layers.find((l) => l.id === layerId),
+/** Catalog datasets that can be visualized (have joinField + CSV on known indicators). */
+const ADDABLE_DATASETS = INDICATORS.map((ind) => {
+  const cat = catalogDatasets.find(
+    (d) => d.id === ind.id || d.filePath.includes(ind.csv.split("/").pop()!),
   );
-  const setChoropleth = useWorkbenchStore((s) => s.setChoropleth);
-
-  const indicator = INDICATORS.find((i) => i.id === layerId);
-  if (!indicator || indicator.fields.length <= 1) return null;
-
-  const activeField = layer?.choropleth?.field ?? indicator.defaultField;
-
-  return (
-    <div className="px-2 pl-6 pb-1.5">
-      <div className="relative">
-        <select
-          value={activeField}
-          onChange={(e) =>
-            setChoropleth(layerId, {
-              field: e.target.value,
-              scale: "quantile",
-              colors: [],
-            })
-          }
-          className="w-full appearance-none rounded bg-zinc-700 px-2 py-1 pr-6 text-[10px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50"
-        >
-          {indicator.fields.map((f) => (
-            <option key={f.key} value={f.key}>
-              {f.label}
-              {f.unit ? ` (${f.unit})` : ""}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
-      </div>
-    </div>
-  );
-}
+  return {
+    indicatorId: ind.id,
+    label: ind.label,
+    description: cat?.description ?? "",
+    scale: ind.scale,
+    palette: INDICATOR_PALETTES[ind.id] ?? "teal",
+  };
+});
 
 export default function WorkbenchPage() {
-  const layers = useWorkbenchStore((s) => s.layers);
-  const toggleLayer = useWorkbenchStore((s) => s.toggleLayer);
-  const setLayerOpacity = useWorkbenchStore((s) => s.setLayerOpacity);
+  const wbDatasets = useWorkbenchStore((s) => s.datasets);
+  const activeDatasetId = useWorkbenchStore((s) => s.activeDatasetId);
+  const addDataset = useWorkbenchStore((s) => s.addDataset);
+  const removeDataset = useWorkbenchStore((s) => s.removeDataset);
+  const setActiveDataset = useWorkbenchStore((s) => s.setActiveDataset);
+  const setDatasetField = useWorkbenchStore((s) => s.setDatasetField);
+  const setDatasetPalette = useWorkbenchStore((s) => s.setDatasetPalette);
+  const setDatasetOpacity = useWorkbenchStore((s) => s.setDatasetOpacity);
+
+  const boundaries = useWorkbenchStore((s) => s.boundaries);
+  const toggleBoundary = useWorkbenchStore((s) => s.toggleBoundary);
+  const setBoundaryOpacity = useWorkbenchStore((s) => s.setBoundaryOpacity);
+
   const bottomPanelOpen = useWorkbenchStore((s) => s.bottomPanelOpen);
   const toggleBottomPanel = useWorkbenchStore((s) => s.toggleBottomPanel);
   const selectedFeatureProperties = useWorkbenchStore(
@@ -116,32 +118,37 @@ export default function WorkbenchPage() {
   const viewMode = useWorkbenchStore((s) => s.viewMode);
   const setViewMode = useWorkbenchStore((s) => s.setViewMode);
   const setChartType = useWorkbenchStore((s) => s.setChartType);
-  const applyTemplate = useWorkbenchStore((s) => s.applyTemplate);
   const geoScope = useWorkbenchStore((s) => s.geoScope);
   const setGeoScope = useWorkbenchStore((s) => s.setGeoScope);
   const activeLegend = useWorkbenchStore((s) => s.activeLegend);
 
-  const boundaryLayers = layers.filter((l) => l.type === "line");
-  const dataLayers = layers.filter((l) => l.type !== "line");
-  const hasActiveData = dataLayers.some((l) => l.visible);
+  const [showPicker, setShowPicker] = useState(false);
 
-  // Active indicator info for sidebar summary
-  const activeIndicator = useMemo(() => {
-    const active = dataLayers.find((l) => l.visible && l.type === "fill");
-    if (!active) return null;
-    const ind = INDICATORS.find((i) => i.id === active.id);
-    if (!ind) return null;
-    const field = active.choropleth?.field ?? ind.defaultField;
-    const fieldDef = ind.fields.find((f) => f.key === field);
-    const palKey = INDICATOR_PALETTES[ind.id] ?? "teal";
-    return { layer: active, indicator: ind, field, fieldDef, palKey };
-  }, [dataLayers]);
+  const activeDs = useMemo(
+    () => wbDatasets.find((d) => d.id === activeDatasetId) ?? null,
+    [wbDatasets, activeDatasetId],
+  );
 
   function handleTemplate(t: WorkbenchTemplate) {
-    const newLayers = buildTemplateLayers(layers, t);
-    applyTemplate(t.id, newLayers);
+    const ds = datasetFromTemplate(t);
+    if (!ds) return;
+    addDataset(ds);
     setViewMode(t.viewMode);
     if (t.chartType) setChartType(t.chartType);
+  }
+
+  function handleAddFromPicker(indicatorId: string) {
+    // Don't add duplicates
+    if (wbDatasets.some((d) => d.datasetId === indicatorId)) {
+      setActiveDataset(wbDatasets.find((d) => d.datasetId === indicatorId)!.id);
+      setShowPicker(false);
+      return;
+    }
+    const ds = datasetFromIndicator(indicatorId);
+    if (ds) {
+      addDataset(ds);
+      setShowPicker(false);
+    }
   }
 
   function handleRegionChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -155,6 +162,62 @@ export default function WorkbenchPage() {
     if (region) {
       setGeoScope({ type: "regione", code: region.code, name: region.name });
     }
+  }
+
+  function handleProvinceChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value;
+    if (val === "") {
+      // Back to region scope
+      if (geoScope) {
+        const region = REGIONS.find(
+          (r) =>
+            r.code ===
+            (geoScope.type === "provincia"
+              ? PROVINCES.find((p) => p.code === geoScope.code)?.regionCode
+              : geoScope.code),
+        );
+        if (region) {
+          setGeoScope({
+            type: "regione",
+            code: region.code,
+            name: region.name,
+          });
+        }
+      }
+      return;
+    }
+    const code = parseInt(val, 10);
+    const prov = PROVINCES.find((p) => p.code === code);
+    if (prov) {
+      setGeoScope({ type: "provincia", code: prov.code, name: prov.name });
+    }
+  }
+
+  // Provinces available for current region scope
+  const availableProvinces = useMemo(() => {
+    if (!geoScope) return [];
+    const regionCode =
+      geoScope.type === "regione"
+        ? geoScope.code
+        : PROVINCES.find((p) => p.code === geoScope.code)?.regionCode;
+    if (!regionCode) return [];
+    return PROVINCES.filter((p) => p.regionCode === regionCode);
+  }, [geoScope]);
+
+  function handleExportPng() {
+    const canvas = document.querySelector(
+      ".maplibregl-canvas",
+    ) as HTMLCanvasElement | null;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `limen-mappa-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   return (
@@ -172,6 +235,9 @@ export default function WorkbenchPage() {
               <span>IMEN</span>
             </span>
           </Link>
+          <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400">
+            Beta
+          </span>
           <span className="h-4 w-px bg-zinc-700" />
 
           {/* View mode toggle */}
@@ -202,7 +268,7 @@ export default function WorkbenchPage() {
             </button>
           </div>
 
-          {/* Geo scope badge — quick indicator */}
+          {/* Geo scope badge */}
           {geoScope && (
             <button
               type="button"
@@ -218,21 +284,12 @@ export default function WorkbenchPage() {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            disabled
-            title="Disponibile presto"
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-500 cursor-not-allowed opacity-50"
+            onClick={handleExportPng}
+            disabled={viewMode !== "map"}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Upload className="h-3 w-3" />
-            Carica
-          </button>
-          <button
-            type="button"
-            disabled
-            title="Disponibile presto"
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-zinc-500 cursor-not-allowed opacity-50"
-          >
-            <Download className="h-3 w-3" />
-            Esporta
+            <Camera className="h-3.5 w-3.5" />
+            Esporta PNG
           </button>
         </div>
       </header>
@@ -240,155 +297,323 @@ export default function WorkbenchPage() {
       {/* Main area */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* ── Sidebar ──────────────────────────────────────────── */}
-        <aside className="w-68 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-900 flex flex-col">
-          {/* Geographic scope selector */}
-          <div className="p-3 pb-2 border-b border-zinc-800">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Globe className="h-3 w-3 text-zinc-500" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                Ambito Geografico
-              </span>
-            </div>
-            <div className="relative">
-              <select
-                value={geoScope?.code ?? ""}
-                onChange={handleRegionChange}
-                className="w-full appearance-none rounded-md bg-zinc-800 border border-zinc-700 px-2.5 py-1.5 pr-7 text-[12px] text-zinc-200 outline-none focus:ring-1 focus:ring-[#00D9A3]/50 focus:border-[#00D9A3]/30 transition-colors"
-              >
-                <option value="">Tutta Italia</option>
-                {REGIONS.map((r) => (
-                  <option key={r.code} value={r.code}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
-            </div>
-          </div>
-
-          {/* Indicator layers */}
+        <aside className="w-72 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-900 flex flex-col">
+          {/* Dataset attivi section */}
           <div className="p-3 flex-1">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Layers className="h-3 w-3 text-zinc-500" />
+            <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                Indicatori
+                Dataset attivi
               </span>
+              <button
+                type="button"
+                onClick={() => setShowPicker(true)}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[#00D9A3] hover:bg-[#00D9A3]/10 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Aggiungi
+              </button>
             </div>
-            <div className="space-y-0.5">
-              {dataLayers.map((layer) => {
-                const ind = INDICATORS.find((i) => i.id === layer.id);
-                const palKey = ind
-                  ? (INDICATOR_PALETTES[ind.id] ?? "teal")
-                  : null;
-                const swatch = palKey ? PALETTES[palKey][3] : undefined;
 
-                return (
-                  <div key={layer.id}>
-                    <button
-                      type="button"
-                      onClick={() => toggleLayer(layer.id)}
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-left transition-colors ${
-                        layer.visible
-                          ? "bg-zinc-800 text-zinc-200"
-                          : "text-zinc-500 hover:bg-zinc-800/50"
-                      }`}
-                    >
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-sm border"
-                        style={{
-                          backgroundColor: layer.visible
-                            ? (swatch ?? "#00D9A3")
-                            : "transparent",
-                          borderColor: layer.visible
-                            ? (swatch ?? "#00D9A3")
-                            : "#52525b",
-                        }}
-                      />
-                      <span className="flex-1 truncate">{layer.label}</span>
-                      {ind && (
-                        <span className="text-[9px] text-zinc-600 shrink-0">
-                          {ind.scale === "comunale" ? "COM" : "PROV"}
+            {wbDatasets.length === 0 ? (
+              <div className="space-y-3">
+                {/* Quick-start templates */}
+                <p className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">
+                  Inizia con
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {TEMPLATES.filter((t) => t.viewMode === "map")
+                    .slice(0, 4)
+                    .map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => handleTemplate(t)}
+                        className="group flex flex-col gap-1 rounded-lg border border-zinc-800 bg-zinc-800/40 p-2 text-left transition-all hover:border-zinc-700 hover:bg-zinc-800"
+                      >
+                        <div
+                          className="h-0.5 w-5 rounded-full"
+                          style={{ backgroundColor: t.color }}
+                        />
+                        <span className="text-[10px] font-medium text-zinc-300 group-hover:text-white leading-tight">
+                          {t.title}
                         </span>
-                      )}
-                    </button>
-                    {layer.visible && (
-                      <>
-                        <div className="flex items-center gap-1.5 px-2 pl-7 pb-0.5 pt-0.5">
-                          <input
-                            type="range"
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            value={layer.opacity}
-                            onChange={(e) =>
-                              setLayerOpacity(layer.id, Number(e.target.value))
-                            }
-                            className="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-700 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00D9A3]"
-                            aria-label={`Opacità ${layer.label}`}
-                          />
-                          <span className="text-[10px] text-zinc-500 tabular-nums w-7 text-right shrink-0">
-                            {Math.round(layer.opacity * 100)}%
+                      </button>
+                    ))}
+                </div>
+                {/* Chart templates */}
+                {TEMPLATES.filter((t) => t.viewMode === "chart").length > 0 && (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {TEMPLATES.filter((t) => t.viewMode === "chart").map(
+                      (t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => handleTemplate(t)}
+                          className="group flex flex-col gap-1 rounded-lg border border-zinc-800 bg-zinc-800/40 p-2 text-left transition-all hover:border-zinc-700 hover:bg-zinc-800"
+                        >
+                          <BarChart3 className="h-2.5 w-2.5 text-zinc-600 group-hover:text-[#00D9A3]" />
+                          <span className="text-[10px] font-medium text-zinc-300 group-hover:text-white leading-tight">
+                            {t.title}
                           </span>
-                        </div>
-                        {layer.type === "fill" && (
-                          <FieldSelector layerId={layer.id} />
-                        )}
-                      </>
+                        </button>
+                      ),
                     )}
                   </div>
-                );
-              })}
-            </div>
+                )}
+                {/* Or pick manually */}
+                <div className="pt-1 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(true)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#00D9A3]/10 px-3 py-2 text-[11px] font-medium text-[#00D9A3] hover:bg-[#00D9A3]/20 transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Scegli dataset
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {wbDatasets.map((ds) => {
+                  const isActive = ds.id === activeDatasetId;
+                  return (
+                    <div
+                      key={ds.id}
+                      className={`rounded-lg border transition-colors ${
+                        isActive
+                          ? "border-[#00D9A3]/30 bg-zinc-800"
+                          : "border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800/70"
+                      }`}
+                    >
+                      {/* Dataset header — click to activate */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveDataset(ds.id)}
+                        className="flex w-full items-center gap-2 px-2.5 py-2 text-left"
+                      >
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                          style={{
+                            backgroundColor: isActive
+                              ? PALETTES[ds.palette][3]
+                              : "#3f3f46",
+                          }}
+                        />
+                        <span
+                          className={`flex-1 truncate text-[12px] font-medium ${
+                            isActive ? "text-zinc-100" : "text-zinc-400"
+                          }`}
+                        >
+                          {ds.label}
+                        </span>
+                        <span className="text-[9px] text-zinc-600 shrink-0">
+                          {ds.scale === "comunale" ? "COM" : "PROV"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeDataset(ds.id);
+                          }}
+                          className="flex h-5 w-5 items-center justify-center rounded text-zinc-600 hover:text-red-400 hover:bg-zinc-700 transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </button>
+
+                      {/* Expanded config — only for active dataset */}
+                      {isActive && (
+                        <div className="px-2.5 pb-2.5 space-y-2">
+                          {/* Field selector */}
+                          {ds.numericFields.length > 1 && (
+                            <div>
+                              <label className="text-[10px] text-zinc-500 mb-0.5 block">
+                                Campo
+                              </label>
+                              <div className="relative">
+                                <select
+                                  value={ds.activeField}
+                                  onChange={(e) =>
+                                    setDatasetField(ds.id, e.target.value)
+                                  }
+                                  className="w-full appearance-none rounded bg-zinc-700 px-2 py-1 pr-6 text-[11px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50"
+                                >
+                                  {ds.numericFields.map((f) => (
+                                    <option key={f.key} value={f.key}>
+                                      {f.label}
+                                      {f.unit ? ` (${f.unit})` : ""}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Palette selector */}
+                          <div>
+                            <label className="text-[10px] text-zinc-500 mb-0.5 block">
+                              Palette
+                            </label>
+                            <div className="flex gap-1">
+                              {PALETTE_OPTIONS.map((p) => (
+                                <button
+                                  key={p.key}
+                                  type="button"
+                                  onClick={() =>
+                                    setDatasetPalette(ds.id, p.key)
+                                  }
+                                  title={p.label}
+                                  className={`h-5 flex-1 rounded transition-all ${
+                                    ds.palette === p.key
+                                      ? "ring-2 ring-white/40 scale-105"
+                                      : "opacity-60 hover:opacity-100"
+                                  }`}
+                                  style={{
+                                    background: `linear-gradient(to right, ${PALETTES[p.key][0]}, ${PALETTES[p.key][2]}, ${PALETTES[p.key][4]})`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Opacity slider */}
+                          <div>
+                            <label className="text-[10px] text-zinc-500 mb-0.5 block">
+                              Opacità
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={ds.opacity}
+                                onChange={(e) =>
+                                  setDatasetOpacity(
+                                    ds.id,
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-700 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00D9A3]"
+                              />
+                              <span className="text-[10px] text-zinc-500 tabular-nums w-7 text-right">
+                                {Math.round(ds.opacity * 100)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Separator */}
             <div className="my-3 border-t border-zinc-800" />
 
-            {/* Boundary layers — compact */}
+            {/* Boundary layers */}
             <div className="flex items-center gap-1.5 mb-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
                 Confini
               </span>
             </div>
             <div className="space-y-0.5">
-              {boundaryLayers.map((layer) => (
-                <div key={layer.id}>
+              {boundaries.map((b) => (
+                <div key={b.id}>
                   <button
                     type="button"
-                    onClick={() => toggleLayer(layer.id)}
+                    onClick={() => toggleBoundary(b.id)}
                     className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-left transition-colors ${
-                      layer.visible
+                      b.visible
                         ? "bg-zinc-800/60 text-zinc-300"
                         : "text-zinc-600 hover:bg-zinc-800/30"
                     }`}
                   >
                     <span
                       className={`h-1.5 w-4 shrink-0 rounded-full ${
-                        layer.visible ? "bg-[#00D9A3]" : "bg-zinc-700"
+                        b.visible ? "bg-[#00D9A3]" : "bg-zinc-700"
                       }`}
                     />
-                    {layer.label}
+                    {b.label}
                   </button>
-                  {layer.visible && (
+                  {b.visible && (
                     <div className="flex items-center gap-1.5 px-2 pl-8 pb-1">
                       <input
                         type="range"
                         min={0}
                         max={1}
                         step={0.05}
-                        value={layer.opacity}
+                        value={b.opacity}
                         onChange={(e) =>
-                          setLayerOpacity(layer.id, Number(e.target.value))
+                          setBoundaryOpacity(b.id, Number(e.target.value))
                         }
                         className="h-1 w-full cursor-pointer appearance-none rounded-full bg-zinc-700 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00D9A3]"
-                        aria-label={`Opacità ${layer.label}`}
+                        aria-label={`Opacità ${b.label}`}
                       />
                       <span className="text-[10px] text-zinc-500 tabular-nums w-7 text-right shrink-0">
-                        {Math.round(layer.opacity * 100)}%
+                        {Math.round(b.opacity * 100)}%
                       </span>
                     </div>
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Separator */}
+            <div className="my-3 border-t border-zinc-800" />
+
+            {/* Geographic scope */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <Globe className="h-3 w-3 text-zinc-500" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                Ambito Geografico
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {/* Region selector */}
+              <div className="relative">
+                <select
+                  value={
+                    geoScope?.type === "regione"
+                      ? geoScope.code
+                      : geoScope?.type === "provincia"
+                        ? (PROVINCES.find((p) => p.code === geoScope.code)
+                            ?.regionCode ?? "")
+                        : ""
+                  }
+                  onChange={handleRegionChange}
+                  className="w-full appearance-none rounded-md bg-zinc-800 border border-zinc-700 px-2.5 py-1.5 pr-7 text-[12px] text-zinc-200 outline-none focus:ring-1 focus:ring-[#00D9A3]/50 focus:border-[#00D9A3]/30 transition-colors"
+                >
+                  <option value="">Tutta Italia</option>
+                  {REGIONS.map((r) => (
+                    <option key={r.code} value={r.code}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+              </div>
+
+              {/* Province drill-down — appears when a region is selected */}
+              {geoScope && availableProvinces.length > 1 && (
+                <div className="relative">
+                  <select
+                    value={geoScope.type === "provincia" ? geoScope.code : ""}
+                    onChange={handleProvinceChange}
+                    className="w-full appearance-none rounded-md bg-zinc-800 border border-zinc-700 px-2.5 py-1.5 pr-7 text-[11px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50 focus:border-[#00D9A3]/30 transition-colors"
+                  >
+                    <option value="">Tutta la regione</option>
+                    {availableProvinces.map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name} ({p.sigla})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -445,45 +670,6 @@ export default function WorkbenchPage() {
               <ChartView />
             </div>
           )}
-
-          {/* Template gallery — shown when no data layers active */}
-          {!hasActiveData && viewMode === "map" && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950/70 backdrop-blur-sm">
-              <div className="max-w-2xl px-6">
-                <h2 className="text-center text-lg font-medium text-zinc-200 mb-1">
-                  Esplora i dati italiani
-                </h2>
-                <p className="text-center text-[12px] text-zinc-500 mb-6">
-                  Scegli un template per iniziare, oppure attiva i layer dal
-                  pannello.
-                </p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {TEMPLATES.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => handleTemplate(t)}
-                      className="group flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 text-left transition-all hover:border-zinc-700 hover:bg-zinc-800/80"
-                    >
-                      <div
-                        className="h-1 w-8 rounded-full"
-                        style={{ backgroundColor: t.color }}
-                      />
-                      <span className="text-[12px] font-medium text-zinc-200 group-hover:text-white">
-                        {t.title}
-                      </span>
-                      <span className="text-[10px] text-zinc-500 leading-snug">
-                        {t.subtitle}
-                      </span>
-                      <span className="mt-auto text-[10px] font-medium text-zinc-600 group-hover:text-[#00D9A3] transition-colors">
-                        {t.viewMode === "map" ? "🗺 Mappa" : "📊 Grafico"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </main>
       </div>
 
@@ -538,6 +724,75 @@ export default function WorkbenchPage() {
           </div>
         )}
       </div>
+
+      {/* ── Dataset Picker Modal ──────────────────────────────── */}
+      {showPicker && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowPicker(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-3">
+              <h3 className="text-sm font-medium text-zinc-200">
+                Aggiungi dataset
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPicker(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto p-3">
+              <div className="space-y-1">
+                {ADDABLE_DATASETS.map((item) => {
+                  const alreadyAdded = wbDatasets.some(
+                    (d) => d.datasetId === item.indicatorId,
+                  );
+                  return (
+                    <button
+                      key={item.indicatorId}
+                      type="button"
+                      onClick={() => handleAddFromPicker(item.indicatorId)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                        alreadyAdded
+                          ? "bg-zinc-800/50 text-zinc-500"
+                          : "hover:bg-zinc-800 text-zinc-200"
+                      }`}
+                    >
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-sm"
+                        style={{
+                          backgroundColor:
+                            PALETTES[item.palette as PaletteKey][3],
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium truncate">
+                          {item.label}
+                        </p>
+                        <p className="text-[10px] text-zinc-500">
+                          {item.scale === "comunale"
+                            ? "Comunale"
+                            : "Provinciale"}
+                          {alreadyAdded && " · Già aggiunto"}
+                        </p>
+                      </div>
+                      {!alreadyAdded && (
+                        <Plus className="h-4 w-4 shrink-0 text-zinc-500" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

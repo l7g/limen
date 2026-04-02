@@ -30,6 +30,8 @@ export interface DatasetMeta {
   group?: string;
   /** Display label for the group — set only on one member per group. */
   groupLabel?: string;
+  /** Workbench indicator ID — when set, the dataset detail page shows "Apri nel Workbench" linking to this indicator. */
+  workbenchIndicatorId?: string;
 }
 
 export type DatasetCadence =

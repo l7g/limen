@@ -164,9 +164,9 @@ export default async function DatasetDetailPage({
 
         {/* Actions */}
         <div className="mt-6 flex flex-wrap items-center gap-4">
-          {dataset.geometryType && dataset.geometryType !== "none" && (
+          {dataset.workbenchIndicatorId && (
             <Link
-              href={`/workbench?layer=${dataset.id}`}
+              href={`/workbench?layer=${dataset.workbenchIndicatorId}`}
               className="inline-flex items-center gap-2 rounded-lg bg-[#00D9A3] px-4 py-2 text-[13px] font-semibold text-gray-900 transition-colors hover:bg-[#00C594]"
             >
               <Map className="h-4 w-4" />

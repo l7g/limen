@@ -97,6 +97,7 @@ export const datasets: DatasetMeta[] = [
     name: "Popolazione Residente per Comune",
     tier: 1,
     source: "ISTAT",
+    workbenchIndicatorId: "population",
     sourceUrl: "https://esploradati.istat.it/databrowser/",
     description:
       "Popolazione residente al 1° gennaio 2025 per tutti i 7.896 comuni italiani (fonte SDMX ISTAT, dataflow DCIS_POPRES1). Popolazione totale nazionale: 58.943.464 abitanti. Colonne: codice ISTAT a 6 cifre, anno, popolazione totale. Unibile con confini comunali e altri dataset tramite PRO_COM_T per calcolare indicatori pro-capite (motorizzazione, reddito, densità).",
@@ -364,6 +365,7 @@ export const datasets: DatasetMeta[] = [
     name: "Tasso di Motorizzazione",
     tier: 3,
     source: "Limen (calcolato)",
+    workbenchIndicatorId: "vehicles",
     sourceUrl: "",
     description:
       "Numero di veicoli per 1.000 abitanti per provincia italiana — calcolato incrociando il parco veicolare ACI 2024 (55,6M veicoli) con la popolazione ISTAT 2025 (58,9M abitanti). Media nazionale: 982 veicoli/1.000 ab. Range: Milano (763) — Aosta (2.642). Include anche rapporto sole autovetture per 1.000 abitanti. Unibile con confini provinciali (COD_PROV) per mappe choropleth.",
@@ -386,6 +388,7 @@ export const datasets: DatasetMeta[] = [
     name: "Reddito Pro Capite per Comune",
     tier: 3,
     source: "Limen (calcolato)",
+    workbenchIndicatorId: "income",
     sourceUrl: "",
     description:
       "Reddito pro capite per ciascuno dei 7.896 comuni italiani — calcolato incrociando il reddito complessivo IRPEF 2023 (MEF) con la popolazione residente ISTAT 2025. Media nazionale: €16.176 pro capite. Include anche reddito medio per contribuente e pressione fiscale (imposta netta / reddito complessivo). Unibile con confini comunali (PRO_COM_T) per mappe choropleth della ricchezza territoriale.",
@@ -408,6 +411,7 @@ export const datasets: DatasetMeta[] = [
     name: "Densità Abitativa per Comune",
     tier: 3,
     source: "Limen (calcolato)",
+    workbenchIndicatorId: "density",
     sourceUrl: "",
     description:
       "Densità abitativa (abitanti/km²) per ciascuno dei 7.896 comuni italiani — calcolata dalla superficie dei poligoni ISTAT e dalla popolazione residente 2025. Media nazionale: 299 ab/km². Range: comuni montani sotto 1 ab/km² fino a Casavatore (NA) con 11.309 ab/km². Unibile con confini comunali (PRO_COM_T) per mappe choropleth della distribuzione insediativa.",
@@ -430,6 +434,7 @@ export const datasets: DatasetMeta[] = [
     name: "Bilancio Pendolari per Comune",
     tier: 3,
     source: "Limen (calcolato)",
+    workbenchIndicatorId: "commuters",
     sourceUrl: "",
     description:
       "Bilancio netto dei flussi pendolari per ciascuno dei 7.904 comuni italiani — calcolato dalla matrice OD del Censimento permanente 2021. Pendolari in entrata meno pendolari in uscita: positivo = polo attrattore, negativo = comune dormitorio. 1.607 comuni attrattori, 6.281 dormitori. Include pendolari interni e bilancio per 1.000 abitanti. Unibile con confini comunali (PRO_COM_T).",
@@ -452,6 +457,7 @@ export const datasets: DatasetMeta[] = [
     name: "Emissioni Veicolari Stimate per Provincia",
     tier: 3,
     source: "Limen (calcolato)",
+    workbenchIndicatorId: "emissions",
     sourceUrl: "",
     description:
       "Emissioni annue stimate di CO₂, NOx e PM2.5 per ciascuna delle 107 province italiane — calcolate incrociando il parco veicolare ACI (autovetture, autobus, autocarri, motocicli) con i fattori di emissione ISPRA per categoria di veicolo (g/km, anno 2022), assumendo 10.000 km/anno medi per veicolo. Include CO₂ in tonnellate/anno, NOx e PM2.5 in kg/anno, e CO₂ per veicolo in kg. Unibile con confini provinciali (COD_PROV).",
@@ -474,6 +480,7 @@ export const datasets: DatasetMeta[] = [
     name: "Indicatori Demografici per Comune",
     tier: 3,
     source: "Limen (calcolato)",
+    workbenchIndicatorId: "demographics",
     sourceUrl: "",
     description:
       "Cinque indicatori demografici per ciascuno dei 7.904 comuni italiani — calcolati dalla struttura demografica ISTAT (popolazione per età e sesso). Indice di vecchiaia (65+/0-14 ×100), indice di dipendenza ((0-14 + 65+)/15-64 ×100), percentuale giovani, percentuale anziani, e rapporto di mascolinità (M/F ×100). Unibile con confini comunali (PRO_COM_T).",

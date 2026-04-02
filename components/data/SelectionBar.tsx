@@ -9,7 +9,7 @@ import {
   Merge,
   Link2,
   Info,
-  MapIcon,
+  ExternalLink,
 } from "lucide-react";
 import type { DatasetMeta } from "@/lib/datasets/types";
 import {
@@ -297,11 +297,10 @@ export default function SelectionBar({
             {workbenchUrl && (
               <Link
                 href={workbenchUrl}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#00D9A3] px-3.5 py-2 text-[12px] font-semibold text-gray-900 transition-colors hover:bg-[#00C594]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
               >
-                <MapIcon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Apri nel Workbench</span>
-                <span className="sm:hidden">Mappa</span>
+                <ExternalLink className="h-3 w-3" />
+                <span className="hidden sm:inline">Workbench</span>
               </Link>
             )}
 

@@ -88,18 +88,35 @@ function LayerParamSync() {
 }
 
 /** Catalog datasets that can be visualized (have joinField + CSV on known indicators). */
-const ADDABLE_DATASETS = INDICATORS.map((ind) => {
+const ADDABLE_CHOROPLETH = INDICATORS.map((ind) => {
   const cat = catalogDatasets.find(
     (d) => d.id === ind.id || d.filePath.includes(ind.csv.split("/").pop()!),
   );
   return {
     indicatorId: ind.id,
+    type: "choropleth" as const,
     label: ind.label,
     description: cat?.description ?? "",
     scale: ind.scale,
-    palette: INDICATOR_PALETTES[ind.id] ?? "teal",
+    palette: (INDICATOR_PALETTES[ind.id] ?? "teal") as PaletteKey,
   };
 });
+
+/** Point datasets (e.g. GTFS stops). */
+const ADDABLE_POINTS = [
+  {
+    indicatorId: "gtfs-sardegna",
+    type: "points" as const,
+    label: "Fermate TPL",
+    description:
+      "6.275 fermate del trasporto pubblico in Sardegna (ARST, CTM, ATP, ASPO, Trenitalia)",
+    coverageLabel: "Sardegna",
+    geojsonUrl: "/data/transit/all-stops.geojson",
+    palette: "teal" as PaletteKey,
+  },
+];
+
+const ADDABLE_DATASETS = [...ADDABLE_CHOROPLETH, ...ADDABLE_POINTS];
 
 export default function WorkbenchPage() {
   const wbDatasets = useWorkbenchStore((s) => s.datasets);
@@ -114,8 +131,6 @@ export default function WorkbenchPage() {
   const boundaries = useWorkbenchStore((s) => s.boundaries);
   const toggleBoundary = useWorkbenchStore((s) => s.toggleBoundary);
   const setBoundaryOpacity = useWorkbenchStore((s) => s.setBoundaryOpacity);
-  const transitStopsVisible = useWorkbenchStore((s) => s.transitStopsVisible);
-  const toggleTransitStops = useWorkbenchStore((s) => s.toggleTransitStops);
 
   const bottomPanelOpen = useWorkbenchStore((s) => s.bottomPanelOpen);
   const toggleBottomPanel = useWorkbenchStore((s) => s.toggleBottomPanel);
@@ -146,9 +161,27 @@ export default function WorkbenchPage() {
       setShowPicker(false);
       return;
     }
+    // Try choropleth indicator first
     const ds = datasetFromIndicator(indicatorId);
     if (ds) {
       addDataset(ds);
+      setShowPicker(false);
+      return;
+    }
+    // Try point dataset
+    const pt = ADDABLE_POINTS.find((p) => p.indicatorId === indicatorId);
+    if (pt) {
+      const instanceId = `pts-${indicatorId}`;
+      addDataset({
+        id: instanceId,
+        datasetId: indicatorId,
+        type: "points",
+        label: pt.label,
+        geojsonUrl: pt.geojsonUrl,
+        coverageLabel: pt.coverageLabel,
+        palette: pt.palette,
+        opacity: 0.8,
+      });
       setShowPicker(false);
     }
   }
@@ -416,7 +449,11 @@ export default function WorkbenchPage() {
                           {ds.label}
                         </span>
                         <span className="text-[9px] text-zinc-600 shrink-0">
-                          {ds.scale === "comunale" ? "COM" : "PROV"}
+                          {ds.type === "points"
+                            ? (ds.coverageLabel ?? "Punti")
+                            : ds.scale === "comunale"
+                              ? "COM"
+                              : "PROV"}
                         </span>
                         <button
                           type="button"
@@ -433,31 +470,33 @@ export default function WorkbenchPage() {
                       {/* Expanded config — only for active dataset */}
                       {isActive && (
                         <div className="px-2.5 pb-2.5 space-y-2">
-                          {/* Field selector */}
-                          {ds.numericFields.length > 1 && (
-                            <div>
-                              <label className="text-[10px] text-zinc-500 mb-0.5 block">
-                                Campo
-                              </label>
-                              <div className="relative">
-                                <select
-                                  value={ds.activeField}
-                                  onChange={(e) =>
-                                    setDatasetField(ds.id, e.target.value)
-                                  }
-                                  className="w-full appearance-none rounded bg-zinc-700 px-2 py-1 pr-6 text-[11px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50"
-                                >
-                                  {ds.numericFields.map((f) => (
-                                    <option key={f.key} value={f.key}>
-                                      {f.label}
-                                      {f.unit ? ` (${f.unit})` : ""}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+                          {/* Field selector — choropleth only */}
+                          {ds.type === "choropleth" &&
+                            ds.numericFields &&
+                            ds.numericFields.length > 1 && (
+                              <div>
+                                <label className="text-[10px] text-zinc-500 mb-0.5 block">
+                                  Campo
+                                </label>
+                                <div className="relative">
+                                  <select
+                                    value={ds.activeField}
+                                    onChange={(e) =>
+                                      setDatasetField(ds.id, e.target.value)
+                                    }
+                                    className="w-full appearance-none rounded bg-zinc-700 px-2 py-1 pr-6 text-[11px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50"
+                                  >
+                                    {ds.numericFields.map((f) => (
+                                      <option key={f.key} value={f.key}>
+                                        {f.label}
+                                        {f.unit ? ` (${f.unit})` : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
                           {/* Palette selector */}
                           <div>
@@ -568,29 +607,6 @@ export default function WorkbenchPage() {
                   )}
                 </div>
               ))}
-            </div>
-
-            {/* Transit stops layer */}
-            <div className="mt-1">
-              <button
-                type="button"
-                onClick={() => toggleTransitStops()}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-left transition-colors ${
-                  transitStopsVisible
-                    ? "bg-zinc-800/60 text-zinc-300"
-                    : "text-zinc-600 hover:bg-zinc-800/30"
-                }`}
-              >
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    transitStopsVisible ? "bg-[#00D9A3]" : "bg-zinc-700"
-                  }`}
-                />
-                Fermate TPL
-                <span className="ml-auto text-[9px] text-zinc-600">
-                  Sardegna
-                </span>
-              </button>
             </div>
 
             {/* Separator */}
@@ -808,9 +824,13 @@ export default function WorkbenchPage() {
                           {item.label}
                         </p>
                         <p className="text-[10px] text-zinc-500">
-                          {item.scale === "comunale"
-                            ? "Comunale"
-                            : "Provinciale"}
+                          {item.type === "points"
+                            ? ((item as (typeof ADDABLE_POINTS)[number])
+                                .coverageLabel ?? "Punti")
+                            : (item as (typeof ADDABLE_CHOROPLETH)[number])
+                                  .scale === "comunale"
+                              ? "Comunale"
+                              : "Provinciale"}
                           {alreadyAdded && " · Già aggiunto"}
                         </p>
                       </div>

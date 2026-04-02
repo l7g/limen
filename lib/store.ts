@@ -22,9 +22,6 @@ interface WorkbenchActions {
   toggleBoundary: (id: string) => void;
   setBoundaryOpacity: (id: string, opacity: number) => void;
 
-  // Transit
-  toggleTransitStops: () => void;
-
   // Map state
   setCenter: (center: [number, number]) => void;
   setZoom: (zoom: number) => void;
@@ -67,8 +64,6 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
       { id: "comuni", label: "Confini Comunali", visible: false, opacity: 0.3 },
     ],
 
-    transitStopsVisible: false,
-
     center: INITIAL_CENTER,
     zoom: INITIAL_ZOOM,
     selectedFeatureId: null,
@@ -81,11 +76,21 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
 
     // ── Dataset actions ────────────────────────────────────
     addDataset: (dataset) =>
-      set((state) => ({
-        datasets: [...state.datasets, dataset],
-        activeDatasetId:
-          state.datasets.length === 0 ? dataset.id : state.activeDatasetId,
-      })),
+      set((state) => {
+        // Prevent duplicates by datasetId
+        if (state.datasets.some((d) => d.datasetId === dataset.datasetId)) {
+          return {
+            activeDatasetId: state.datasets.find(
+              (d) => d.datasetId === dataset.datasetId,
+            )!.id,
+          };
+        }
+        return {
+          datasets: [...state.datasets, dataset],
+          activeDatasetId:
+            state.datasets.length === 0 ? dataset.id : state.activeDatasetId,
+        };
+      }),
 
     removeDataset: (id) =>
       set((state) => {
@@ -136,10 +141,6 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
           b.id === id ? { ...b, opacity } : b,
         ),
       })),
-
-    // ── Transit actions ────────────────────────────────────
-    toggleTransitStops: () =>
-      set((state) => ({ transitStopsVisible: !state.transitStopsVisible })),
 
     // ── Map actions ────────────────────────────────────────
     setCenter: (center) => set({ center }),

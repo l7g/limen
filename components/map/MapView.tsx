@@ -117,7 +117,6 @@ export default function MapView() {
   const selectFeature = useWorkbenchStore((s) => s.selectFeature);
   const setActiveLegend = useWorkbenchStore((s) => s.setActiveLegend);
   const geoScope = useWorkbenchStore((s) => s.geoScope);
-  const transitStopsVisible = useWorkbenchStore((s) => s.transitStopsVisible);
 
   const { center, zoom } = useWorkbenchStore.getState();
 
@@ -156,11 +155,18 @@ export default function MapView() {
     needsComuniBoundary,
   );
 
-  // Transit stops (Sardinia GTFS)
-  const transitStopsData = useGeoJson(
-    "/data/transit/all-stops.geojson",
-    transitStopsVisible,
+  // ── Point-type datasets (e.g. GTFS stops) ──────────────────
+  const pointDatasets = useMemo(
+    () => datasets.filter((d) => d.type === "points" && d.geojsonUrl),
+    [datasets],
   );
+
+  // Fetch GeoJSON for each visible point dataset
+  const pointGeoJsonEntries = pointDatasets.map((ds) => ({
+    ds,
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    data: useGeoJson(ds.geojsonUrl!, true),
+  }));
 
   // ── Scope-filtered boundaries (only show features within geoScope) ──
   const scopedRegioniData = useMemo(() => {
@@ -203,7 +209,7 @@ export default function MapView() {
 
   // ── Compute color expression for active dataset ────────────────
   const fillExpression = useMemo(() => {
-    if (!activeDs || !activeIndicator) return null;
+    if (!activeDs || !activeIndicator || !activeDs.activeField) return null;
 
     const field = activeDs.activeField;
     const data =
@@ -224,7 +230,12 @@ export default function MapView() {
 
   // ── Sync legend data into store for sidebar ─────────────────────
   useEffect(() => {
-    if (!fillExpression || !activeDs || !activeIndicator) {
+    if (
+      !fillExpression ||
+      !activeDs ||
+      !activeIndicator ||
+      !activeDs.activeField
+    ) {
       setActiveLegend(null);
       return;
     }
@@ -278,11 +289,13 @@ export default function MapView() {
     if (activeDs) {
       ids.push(`fill-active`);
     }
-    if (transitStopsVisible) {
-      ids.push("transit-stops-circle");
+    for (const ds of datasets) {
+      if (ds.type === "points") {
+        ids.push(`points-${ds.id}`);
+      }
     }
     return ids;
-  }, [activeDs, transitStopsVisible]);
+  }, [activeDs, datasets]);
 
   const onMoveEnd = useCallback(() => {
     const map = mapRef.current;
@@ -312,6 +325,7 @@ export default function MapView() {
       ref={mapRef}
       initialViewState={{ longitude: center[0], latitude: center[1], zoom }}
       mapStyle={BASEMAP_STYLE}
+      canvasContextAttributes={{ preserveDrawingBuffer: true }}
       style={{ width: "100%", height: "100%" }}
       minZoom={3}
       onMoveEnd={onMoveEnd}
@@ -438,31 +452,39 @@ export default function MapView() {
         </Source>
       )}
 
-      {/* ── Transit stops (point layer) ─────────────────────── */}
-      {transitStopsVisible && transitStopsData && (
-        <Source id="transit-stops" type="geojson" data={transitStopsData}>
-          <Layer
-            id="transit-stops-circle"
-            type="circle"
-            paint={{
-              "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                5,
-                1.5,
-                8,
-                3,
-                12,
-                6,
-              ],
-              "circle-color": "#00D9A3",
-              "circle-opacity": 0.8,
-              "circle-stroke-width": 0.5,
-              "circle-stroke-color": "rgba(255,255,255,0.3)",
-            }}
-          />
-        </Source>
+      {/* ── Point-type dataset layers ─────────────────────── */}
+      {pointGeoJsonEntries.map(
+        ({ ds, data }) =>
+          data && (
+            <Source
+              key={ds.id}
+              id={`points-src-${ds.id}`}
+              type="geojson"
+              data={data}
+            >
+              <Layer
+                id={`points-${ds.id}`}
+                type="circle"
+                paint={{
+                  "circle-radius": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    5,
+                    1.5,
+                    8,
+                    3,
+                    12,
+                    6,
+                  ],
+                  "circle-color": PALETTES[ds.palette][3],
+                  "circle-opacity": ds.opacity,
+                  "circle-stroke-width": 0.5,
+                  "circle-stroke-color": "rgba(255,255,255,0.3)",
+                }}
+              />
+            </Source>
+          ),
       )}
     </Map>
   );

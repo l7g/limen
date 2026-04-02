@@ -91,6 +91,7 @@ export function datasetFromTemplate(
   return {
     id: `tpl-${template.id}-${Date.now()}`,
     datasetId: template.indicator,
+    type: "choropleth" as const,
     label: ind.label,
     csvPath: ind.csv,
     joinKey: ind.joinKey,
@@ -115,6 +116,7 @@ export function datasetFromIndicator(
   return {
     id: `ind-${indicatorId}-${Date.now()}`,
     datasetId: indicatorId,
+    type: "choropleth" as const,
     label: ind.label,
     csvPath: ind.csv,
     joinKey: ind.joinKey,

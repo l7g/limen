@@ -132,13 +132,26 @@ export const INDICATORS: IndicatorDef[] = [
 type DataMap = Map<string, Record<string, number>>;
 
 const cache = new Map<string, DataMap>();
+/** Track CSVs that failed to load so we don't retry. */
+const failedPaths = new Set<string>();
 
 /** Fetch + parse CSV, return a lookup map keyed by joinKey. */
 async function loadCSV(csvPath: string, joinKey: string): Promise<DataMap> {
   const cacheKey = csvPath;
   if (cache.has(cacheKey)) return cache.get(cacheKey)!;
+  if (failedPaths.has(cacheKey)) return new Map();
 
-  const resp = await fetch(`/data/${csvPath}`);
+  let resp: Response;
+  try {
+    resp = await fetch(`/data/${csvPath}`);
+  } catch {
+    failedPaths.add(cacheKey);
+    return new Map();
+  }
+  if (!resp.ok) {
+    failedPaths.add(cacheKey);
+    return new Map();
+  }
   const text = await resp.text();
 
   const { data } = Papa.parse<Record<string, string>>(text, {

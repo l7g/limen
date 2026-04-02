@@ -72,9 +72,11 @@ function useEnrichedGeoJson(
       return;
     }
     let cancelled = false;
-    enrichGeoJSON(geojson, indicator).then((result) => {
-      if (!cancelled) setEnriched(result);
-    });
+    enrichGeoJSON(geojson, indicator)
+      .then((result) => {
+        if (!cancelled) setEnriched(result);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };

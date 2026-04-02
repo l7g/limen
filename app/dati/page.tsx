@@ -4,7 +4,11 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Search, Download, Database, Check } from "lucide-react";
 import { datasets } from "@/lib/datasets/catalog";
 import { daysSinceUpdate } from "@/lib/datasets/freshness";
-import type { DatasetCategory, DatasetMeta } from "@/lib/datasets/types";
+import type {
+  DatasetCategory,
+  DatasetMeta,
+  DatasetStatus,
+} from "@/lib/datasets/types";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import GeoFilter, { type GeoSelection } from "@/components/data/GeoFilter";
@@ -23,7 +27,8 @@ const CATEGORY_LABELS: Record<DatasetCategory, string> = {
   indicatori: "Indicatori",
 };
 
-const CATEGORY_COLORS: Record<DatasetCategory, string> = {
+/** Background color for category dots and row stripe */
+const CATEGORY_DOT_COLORS: Record<DatasetCategory, string> = {
   confini: "bg-teal-400",
   demografia: "bg-blue-400",
   trasporti: "bg-emerald-400",
@@ -32,6 +37,18 @@ const CATEGORY_COLORS: Record<DatasetCategory, string> = {
   ambiente: "bg-rose-400",
   servizi: "bg-indigo-400",
   indicatori: "bg-pink-400",
+};
+
+/** Tinted backgrounds for active category filter pills */
+const CATEGORY_PILL_ACTIVE: Record<DatasetCategory, string> = {
+  confini: "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
+  demografia: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+  trasporti: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
+  veicoli: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+  economia: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  ambiente: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
+  servizi: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
+  indicatori: "bg-pink-50 text-pink-700 ring-1 ring-pink-200",
 };
 
 const CATEGORY_ORDER: DatasetCategory[] = [
@@ -45,10 +62,24 @@ const CATEGORY_ORDER: DatasetCategory[] = [
   "indicatori",
 ];
 
-const TIER_LABELS: Record<number, string> = {
-  1: "API",
-  2: "Curato",
-  3: "Calcolato",
+const TIER_LABELS: Record<number, { label: string; style: string }> = {
+  1: { label: "API", style: "bg-emerald-50 text-emerald-600" },
+  2: { label: "Curato", style: "bg-gray-100 text-gray-500" },
+  3: { label: "Calcolato", style: "bg-violet-50 text-violet-600" },
+};
+
+const FRESHNESS_DOT: Record<DatasetStatus, string> = {
+  current: "bg-emerald-400",
+  expiring: "bg-amber-400",
+  stale: "bg-red-400",
+  error: "bg-red-400",
+};
+
+const FRESHNESS_TEXT: Record<DatasetStatus, string> = {
+  current: "text-emerald-600",
+  expiring: "text-amber-600",
+  stale: "text-red-500",
+  error: "text-red-500",
 };
 
 const SARDEGNA_COD = "20";
@@ -95,9 +126,7 @@ function DatasetRow({
       }`}
     >
       {/* Category color indicator */}
-      <div
-        className={`w-0.5 shrink-0 ${CATEGORY_COLORS[d.category]} opacity-60`}
-      />
+      <div className={`w-1 shrink-0 ${CATEGORY_DOT_COLORS[d.category]}`} />
 
       {/* Checkbox */}
       <button
@@ -136,20 +165,29 @@ function DatasetRow({
           <div className="flex items-center gap-2 text-[11px] text-gray-400">
             <span>{d.source}</span>
             <span className="text-gray-200">·</span>
-            <span>{formatUpdatedAgo(d.ageDays, d.lastUpdated)}</span>
+            <span
+              className={`inline-flex items-center gap-1 ${FRESHNESS_TEXT[d.status]}`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${FRESHNESS_DOT[d.status]}`}
+              />
+              {formatUpdatedAgo(d.ageDays, d.lastUpdated)}
+            </span>
           </div>
         </div>
 
         {/* Metadata badges — right side */}
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10.5px] font-medium text-gray-500">
-            {d.coverage === "italy" ? "IT" : "SRD"}
+            {d.coverage === "italy" ? "Italia" : "Sardegna"}
           </span>
           <span className="w-12 text-right font-mono text-[10.5px] uppercase text-gray-400">
             {d.format}
           </span>
-          <span className="w-14 text-right text-[10.5px] text-gray-400">
-            {TIER_LABELS[d.tier]}
+          <span
+            className={`rounded-md px-2 py-0.5 text-[10.5px] font-medium ${TIER_LABELS[d.tier].style}`}
+          >
+            {TIER_LABELS[d.tier].label}
           </span>
         </div>
       </button>
@@ -335,14 +373,14 @@ export default function DatiPage() {
                 }
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11.5px] font-medium transition-all ${
                   isActive
-                    ? "bg-gray-900 text-white"
+                    ? CATEGORY_PILL_ACTIVE[catId]
                     : isDisabled
                       ? "cursor-default bg-gray-50 text-gray-300"
                       : "bg-gray-100 text-gray-500 hover:text-gray-700"
                 }`}
               >
                 <span
-                  className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-white/60" : CATEGORY_COLORS[catId]} ${isDisabled ? "opacity-30" : "opacity-70"}`}
+                  className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-white/60" : CATEGORY_DOT_COLORS[catId]} ${isDisabled ? "opacity-30" : "opacity-70"}`}
                 />
                 {CATEGORY_LABELS[catId]}
                 <span className="text-[10px] opacity-60">{count}</span>

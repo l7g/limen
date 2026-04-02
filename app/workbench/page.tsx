@@ -386,10 +386,17 @@ export default function WorkbenchPage() {
                       }`}
                     >
                       {/* Dataset header — click to activate */}
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setActiveDataset(ds.id)}
-                        className="flex w-full items-center gap-2 px-2.5 py-2 text-left"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setActiveDataset(ds.id);
+                          }
+                        }}
+                        className="flex w-full items-center gap-2 px-2.5 py-2 text-left cursor-pointer"
                       >
                         <span
                           className="h-2.5 w-2.5 shrink-0 rounded-sm"
@@ -419,7 +426,7 @@ export default function WorkbenchPage() {
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
-                      </button>
+                      </div>
 
                       {/* Expanded config — only for active dataset */}
                       {isActive && (

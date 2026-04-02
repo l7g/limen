@@ -94,6 +94,32 @@ export default function InfoPage() {
 
           <div>
             <h2 className="font-heading text-lg font-semibold text-gray-900">
+              Prossimi passi
+            </h2>
+            <ul className="mt-2 space-y-1.5 list-disc list-inside text-gray-600">
+              <li>Espansione GTFS a livello nazionale</li>
+              <li>
+                Dataset aggiuntivi (scuole, strutture sanitarie, dati
+                ambientali)
+              </li>
+              <li>Upload file nella workbench (CSV, GeoJSON)</li>
+              <li>Link condivisibili con stato della mappa</li>
+            </ul>
+            <p className="mt-2">
+              Roadmap completa:{" "}
+              <a
+                href="https://github.com/l7g/limen/blob/main/ROADMAP.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[#00D9A3] hover:text-[#00B386] transition-colors"
+              >
+                ROADMAP.md
+              </a>
+            </p>
+          </div>
+
+          <div>
+            <h2 className="font-heading text-lg font-semibold text-gray-900">
               Contatti
             </h2>
             <p className="mt-2">

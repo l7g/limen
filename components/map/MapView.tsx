@@ -117,6 +117,7 @@ export default function MapView() {
   const selectFeature = useWorkbenchStore((s) => s.selectFeature);
   const setActiveLegend = useWorkbenchStore((s) => s.setActiveLegend);
   const geoScope = useWorkbenchStore((s) => s.geoScope);
+  const transitStopsVisible = useWorkbenchStore((s) => s.transitStopsVisible);
 
   const { center, zoom } = useWorkbenchStore.getState();
 
@@ -153,6 +154,12 @@ export default function MapView() {
   const comuniData = useGeoJson(
     "/data/boundaries/comuni.geojson",
     needsComuniBoundary,
+  );
+
+  // Transit stops (Sardinia GTFS)
+  const transitStopsData = useGeoJson(
+    "/data/transit/all-stops.geojson",
+    transitStopsVisible,
   );
 
   // ── Scope-filtered boundaries (only show features within geoScope) ──
@@ -271,8 +278,11 @@ export default function MapView() {
     if (activeDs) {
       ids.push(`fill-active`);
     }
+    if (transitStopsVisible) {
+      ids.push("transit-stops-circle");
+    }
     return ids;
-  }, [activeDs]);
+  }, [activeDs, transitStopsVisible]);
 
   const onMoveEnd = useCallback(() => {
     const map = mapRef.current;
@@ -424,6 +434,33 @@ export default function MapView() {
               "line-opacity": comuni?.opacity ?? 0.25,
             }}
             layout={{ visibility: comuni?.visible ? "visible" : "none" }}
+          />
+        </Source>
+      )}
+
+      {/* ── Transit stops (point layer) ─────────────────────── */}
+      {transitStopsVisible && transitStopsData && (
+        <Source id="transit-stops" type="geojson" data={transitStopsData}>
+          <Layer
+            id="transit-stops-circle"
+            type="circle"
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                5,
+                1.5,
+                8,
+                3,
+                12,
+                6,
+              ],
+              "circle-color": "#00D9A3",
+              "circle-opacity": 0.8,
+              "circle-stroke-width": 0.5,
+              "circle-stroke-color": "rgba(255,255,255,0.3)",
+            }}
           />
         </Source>
       )}

@@ -60,7 +60,9 @@ const PALETTE_OPTIONS: { key: PaletteKey; label: string }[] = [
 ];
 
 /**
- * Reads ?layer= param on mount to auto-add a dataset from catalog links.
+ * Reads ?layers= param on mount to auto-add datasets from catalog links.
+ * Supports comma-separated IDs: /workbench?layers=density,income
+ * Also supports legacy single ?layer= param.
  */
 function LayerParamSync() {
   const searchParams = useSearchParams();
@@ -68,12 +70,17 @@ function LayerParamSync() {
   const addDataset = useWorkbenchStore((s) => s.addDataset);
 
   useEffect(() => {
-    const layerParam = searchParams.get("layer");
-    if (!layerParam) return;
-    // Don't add if already present
-    if (datasets.some((d) => d.datasetId === layerParam)) return;
-    const ds = datasetFromIndicator(layerParam);
-    if (ds) addDataset(ds);
+    const raw = searchParams.get("layers") ?? searchParams.get("layer") ?? "";
+    if (!raw) return;
+    const ids = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const id of ids) {
+      if (datasets.some((d) => d.datasetId === id)) continue;
+      const ds = datasetFromIndicator(id);
+      if (ds) addDataset(ds);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -107,6 +114,8 @@ export default function WorkbenchPage() {
   const boundaries = useWorkbenchStore((s) => s.boundaries);
   const toggleBoundary = useWorkbenchStore((s) => s.toggleBoundary);
   const setBoundaryOpacity = useWorkbenchStore((s) => s.setBoundaryOpacity);
+  const transitStopsVisible = useWorkbenchStore((s) => s.transitStopsVisible);
+  const toggleTransitStops = useWorkbenchStore((s) => s.toggleTransitStops);
 
   const bottomPanelOpen = useWorkbenchStore((s) => s.bottomPanelOpen);
   const toggleBottomPanel = useWorkbenchStore((s) => s.toggleBottomPanel);
@@ -559,6 +568,29 @@ export default function WorkbenchPage() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Transit stops layer */}
+            <div className="mt-1">
+              <button
+                type="button"
+                onClick={() => toggleTransitStops()}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-left transition-colors ${
+                  transitStopsVisible
+                    ? "bg-zinc-800/60 text-zinc-300"
+                    : "text-zinc-600 hover:bg-zinc-800/30"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    transitStopsVisible ? "bg-[#00D9A3]" : "bg-zinc-700"
+                  }`}
+                />
+                Fermate TPL
+                <span className="ml-auto text-[9px] text-zinc-600">
+                  Sardegna
+                </span>
+              </button>
             </div>
 
             {/* Separator */}

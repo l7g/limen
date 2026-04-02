@@ -22,6 +22,9 @@ interface WorkbenchActions {
   toggleBoundary: (id: string) => void;
   setBoundaryOpacity: (id: string, opacity: number) => void;
 
+  // Transit
+  toggleTransitStops: () => void;
+
   // Map state
   setCenter: (center: [number, number]) => void;
   setZoom: (zoom: number) => void;
@@ -63,6 +66,8 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
       },
       { id: "comuni", label: "Confini Comunali", visible: false, opacity: 0.3 },
     ],
+
+    transitStopsVisible: false,
 
     center: INITIAL_CENTER,
     zoom: INITIAL_ZOOM,
@@ -131,6 +136,10 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
           b.id === id ? { ...b, opacity } : b,
         ),
       })),
+
+    // ── Transit actions ────────────────────────────────────
+    toggleTransitStops: () =>
+      set((state) => ({ transitStopsVisible: !state.transitStopsVisible })),
 
     // ── Map actions ────────────────────────────────────────
     setCenter: (center) => set({ center }),

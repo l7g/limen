@@ -155,6 +155,8 @@ export interface WorkbenchState {
   activeDatasetId: string | null;
   /** Static boundary line layers. */
   boundaries: BoundaryLayer[];
+  /** Whether transit stop points are visible. */
+  transitStopsVisible: boolean;
   center: [number, number];
   zoom: number;
   selectedFeatureId: string | null;

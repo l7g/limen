@@ -107,7 +107,7 @@ export function executeMerge(
   if (datasets.length === 1) return datasets[0];
 
   let baseRows = datasets[0].rows.map((r) => ({ ...r }));
-  let baseColumns = [...datasets[0].columns];
+  const baseColumns = [...datasets[0].columns];
 
   for (let i = 1; i < datasets.length; i++) {
     const right = datasets[i];
@@ -118,10 +118,6 @@ export function executeMerge(
       if (key) lookup.set(key, row);
     }
 
-    // Add columns from right (skip duplicates and the join key)
-    const newCols = right.columns.filter(
-      (c) => c !== joinKey && !baseColumns.includes(c),
-    );
     // Suffix duplicates that aren't the join key
     const renamedCols: { orig: string; dest: string }[] = [];
     for (const col of right.columns) {

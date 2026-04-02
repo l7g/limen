@@ -68,6 +68,7 @@ function useEnrichedGeoJson(
   );
   useEffect(() => {
     if (!enabled || !geojson || !indicator) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEnriched(null);
       return;
     }
@@ -212,7 +213,7 @@ export default function MapView() {
     const expr = buildStepExpression(field, breaks, palette);
 
     return { expr, breaks, palette };
-  }, [activeDs, activeIndicator, enrichedComuni, enrichedProvince]);
+  }, [activeDs, activeIndicator, scopedEnrichedComuni, scopedEnrichedProvince]);
 
   // ── Sync legend data into store for sidebar ─────────────────────
   useEffect(() => {

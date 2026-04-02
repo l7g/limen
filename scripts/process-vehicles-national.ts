@@ -129,7 +129,7 @@ function main() {
   const rows: OutputRow[] = [];
   let currentArea = "";
   let currentRegione = "";
-  let unmatched: string[] = [];
+  const unmatched: string[] = [];
 
   for (let i = 3; i < rawData.length; i++) {
     const r = rawData[i];

@@ -72,7 +72,6 @@ async function main() {
     (sum, r) => sum + (parseInt(r.OBS_VALUE, 10) || 0),
     0,
   );
-  const year = comuni[0]?.TIME_PERIOD ?? "?";
   const years = [...new Set(comuni.map((r) => r.TIME_PERIOD))];
 
   console.log(`\n✓ Wrote ${comuni.length} comuni to comuni-population.csv`);

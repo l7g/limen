@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -14,7 +14,6 @@ import {
   X,
   Plus,
   Trash2,
-  Palette,
 } from "lucide-react";
 import { useWorkbenchStore } from "@/lib/store";
 import {
@@ -30,7 +29,6 @@ import {
 } from "@/lib/workbench/templates";
 import type { WorkbenchTemplate } from "@/lib/workbench/templates";
 import { REGIONS, PROVINCES } from "@/lib/workbench/geo-scope";
-import type { WorkbenchDataset } from "@/lib/datasets/types";
 import { datasets as catalogDatasets } from "@/lib/datasets/catalog";
 
 /** Dynamic import — MapLibre needs DOM + WebGL, must never SSR. */
@@ -123,11 +121,6 @@ export default function WorkbenchPage() {
   const activeLegend = useWorkbenchStore((s) => s.activeLegend);
 
   const [showPicker, setShowPicker] = useState(false);
-
-  const activeDs = useMemo(
-    () => wbDatasets.find((d) => d.id === activeDatasetId) ?? null,
-    [wbDatasets, activeDatasetId],
-  );
 
   function handleTemplate(t: WorkbenchTemplate) {
     const ds = datasetFromTemplate(t);

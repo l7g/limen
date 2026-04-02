@@ -41,7 +41,7 @@ function useCsvData(
 
   useEffect(() => {
     if (!indicator) return;
-    setLoading(true);
+    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect
     setError(null);
     let cancelled = false;
 

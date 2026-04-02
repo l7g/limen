@@ -23,13 +23,42 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Data Pipeline
 
-Raw data lives in `../DATA/` (shared workspace). Scripts in `scripts/` transform raw data into optimized formats:
+Raw data lives in `../DATA/` (shared workspace). Scripts in `scripts/` transform raw data into optimized formats in `public/data/`.
+
+**Fetch** (download from APIs):
 
 ```bash
-npx tsx scripts/fetch-boundaries.ts    # ISTAT boundaries → GeoJSON
-npx tsx scripts/fetch-population.ts    # ISTAT population → CSV
-npx tsx scripts/fetch-gtfs.ts          # GTFS feeds → stops/routes GeoJSON
-npx tsx scripts/check-freshness.ts     # Check all dataset statuses
+npx tsx scripts/fetch-boundaries.ts        # ISTAT WFS → GeoJSON boundaries
+npx tsx scripts/fetch-population.ts        # ISTAT SDMX → population CSV
+npx tsx scripts/fetch-demographics.ts      # ISTAT demographic structure
+```
+
+**Process** (transform raw files from ../DATA/):
+
+```bash
+npx tsx scripts/process-gtfs-stops.ts      # GTFS feeds → stops GeoJSON
+npx tsx scripts/process-vehicles.ts        # ACI vehicle fleet (Sardinia)
+npx tsx scripts/process-vehicles-national.ts # ACI vehicle fleet (national)
+npx tsx scripts/process-population.ts      # Population by comune
+npx tsx scripts/process-pendolarismo.ts    # ISTAT commuter matrix
+npx tsx scripts/process-income.ts          # MEF income data
+```
+
+**Compute** (derive indicators from processed data):
+
+```bash
+npx tsx scripts/compute-population-density.ts    # Pop ÷ area
+npx tsx scripts/compute-motorization.ts          # Vehicles ÷ population
+npx tsx scripts/compute-income-per-capita.ts     # Income ÷ population
+npx tsx scripts/compute-emissions.ts             # ISPRA emission factors
+npx tsx scripts/compute-demographic-indicators.ts # Age indices
+npx tsx scripts/compute-commuter-balance.ts      # Net commuter flows
+```
+
+**Utility:**
+
+```bash
+npx tsx scripts/check-freshness.ts         # Check all dataset statuses
 ```
 
 ## Pages

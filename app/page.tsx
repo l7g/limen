@@ -57,6 +57,9 @@ export default function Home() {
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-5 py-2.5 text-[13px] font-semibold text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50"
               >
                 Apri il Workbench
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600">
+                  Beta
+                </span>
               </Link>
             </div>
           </div>
@@ -88,9 +91,9 @@ export default function Home() {
                 Esplora su mappa
               </h3>
               <p className="text-[13px] leading-relaxed text-gray-500">
-                Workbench visuale con layer multipli, choropleth e stili. Oggi è
-                un viewer di dati, domani un tool per creare mappe pronte alla
-                pubblicazione.
+                Workbench cartografico con layer multipli, choropleth e filtri
+                geografici. Visualizza dati su mappa, confronta indicatori e
+                esporta viste pronte alla condivisione.
               </p>
             </div>
             <div className="space-y-3">

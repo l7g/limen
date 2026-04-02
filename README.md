@@ -34,14 +34,13 @@ npx tsx scripts/check-freshness.ts     # Check all dataset statuses
 
 ## Pages
 
-| Route        | Purpose                                  |
-| ------------ | ---------------------------------------- |
-| `/`          | Landing page                             |
-| `/workbench` | Split-panel map workbench                |
-| `/dati`      | Data catalog with freshness badges       |
-| `/dati/[id]` | Dataset detail page                      |
-| `/info`      | About the project                        |
-| `/admin`     | Freshness dashboard (password-protected) |
+| Route        | Purpose                            |
+| ------------ | ---------------------------------- |
+| `/`          | Landing page                       |
+| `/workbench` | Split-panel map workbench          |
+| `/dati`      | Data catalog with freshness badges |
+| `/dati/[id]` | Dataset detail page                |
+| `/info`      | About the project                  |
 
 ## Tech Stack
 

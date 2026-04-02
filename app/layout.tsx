@@ -22,6 +22,21 @@ export const metadata: Metadata = {
   description:
     "Piattaforma open-source per trovare, esplorare e combinare i dati pubblici italiani. Catalogo strutturato e workbench cartografico interattivo.",
   metadataBase: new URL("https://limen.city"),
+  openGraph: {
+    title: "Limen — Dati aperti italiani, finalmente in un unico posto",
+    description:
+      "Piattaforma open-source per trovare, esplorare e combinare i dati pubblici italiani. Catalogo strutturato e workbench cartografico interattivo.",
+    url: "https://limen.city",
+    siteName: "Limen",
+    locale: "it_IT",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Limen — Dati aperti italiani",
+    description:
+      "Piattaforma open-source per i dati pubblici italiani. Catalogo + workbench cartografico.",
+  },
 };
 
 export default function RootLayout({

@@ -62,7 +62,7 @@ export default function InfoPage() {
             <p className="mt-2">
               Codice sorgente:{" "}
               <a
-                href="https://github.com/laurentmusic/limen"
+                href="https://github.com/l7g/limen"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-[#00D9A3] hover:text-[#00B386] transition-colors"
@@ -90,6 +90,21 @@ export default function InfoPage() {
                 — App regionale con analisi dettagliata della Sardegna
               </li>
             </ul>
+          </div>
+
+          <div>
+            <h2 className="font-heading text-lg font-semibold text-gray-900">
+              Contatti
+            </h2>
+            <p className="mt-2">
+              Segnalazioni, suggerimenti o richieste dati:{" "}
+              <a
+                href="mailto:info@limen.city"
+                className="font-medium text-[#00D9A3] hover:text-[#00B386] transition-colors"
+              >
+                info@limen.city
+              </a>
+            </p>
           </div>
         </div>
       </main>

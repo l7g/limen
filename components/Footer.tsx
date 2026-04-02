@@ -53,7 +53,7 @@ export default function Footer() {
                   Limen Sardegna
                 </a>
                 <a
-                  href="https://github.com/laurentmusic/limen"
+                  href="https://github.com/l7g/limen"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-gray-900 transition-colors"
@@ -67,9 +67,17 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-gray-200/60 pt-6 text-[12px] text-gray-400 md:flex-row">
-          <p>Open source (MIT) · Dati derivati CC BY 4.0</p>
+          <p>
+            Open source (MIT) · Dati derivati CC BY 4.0 ·{" "}
+            <a
+              href="mailto:info@limen.city"
+              className="transition-colors hover:text-gray-600"
+            >
+              info@limen.city
+            </a>
+          </p>
           <a
-            href="https://github.com/sponsors/laurentmusic"
+            href="https://github.com/sponsors/l7g"
             target="_blank"
             rel="noopener noreferrer"
             className="group flex items-center gap-1.5 text-gray-400 transition-colors hover:text-[#00D9A3]"

@@ -23,9 +23,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Data Pipeline
 
-Raw data lives in `../DATA/` (shared workspace). Scripts in `scripts/` transform raw data into optimized formats in `public/data/`.
+Processed data in `public/data/` is **committed to the repo** — you don't need to run any scripts to develop locally. Scripts in `scripts/` are used to refresh or add data.
 
-**Fetch** (download from APIs):
+### Script categories
+
+**Fetch** — download from public APIs (anyone can run these):
 
 ```bash
 npx tsx scripts/fetch-boundaries.ts        # ISTAT WFS → GeoJSON boundaries
@@ -33,7 +35,7 @@ npx tsx scripts/fetch-population.ts        # ISTAT SDMX → population CSV
 npx tsx scripts/fetch-demographics.ts      # ISTAT demographic structure
 ```
 
-**Process** (transform raw files from ../DATA/):
+**Process** — transform raw source files into `public/data/`. These require raw data files (GTFS ZIPs, ACI CSVs, etc.) that are **not included in the repo**. See [Adding a new dataset](#adding-a-new-dataset) below.
 
 ```bash
 npx tsx scripts/process-gtfs-stops.ts      # GTFS feeds → stops GeoJSON
@@ -44,7 +46,7 @@ npx tsx scripts/process-pendolarismo.ts    # ISTAT commuter matrix
 npx tsx scripts/process-income.ts          # MEF income data
 ```
 
-**Compute** (derive indicators from processed data):
+**Compute** — derive indicators from already-processed data in `public/data/` (anyone can run these):
 
 ```bash
 npx tsx scripts/compute-population-density.ts    # Pop ÷ area
@@ -60,6 +62,17 @@ npx tsx scripts/compute-commuter-balance.ts      # Net commuter flows
 ```bash
 npx tsx scripts/check-freshness.ts         # Check all dataset statuses
 ```
+
+### Adding a new dataset
+
+1. **Download the raw data** from the official source (link it in your PR description)
+2. **Write a script** in `scripts/` — either a `fetch-*` (if the source has a public API) or `process-*` (if manual download)
+3. **Output** goes to the appropriate folder in `public/data/` (e.g. `public/data/boundaries/`, `public/data/population/`)
+4. **Add metadata** to the dataset catalog in `lib/datasets/catalog.ts`
+5. **Commit the processed output** — raw source files stay out of the repo, processed data goes in
+6. **Open a PR** with the script + processed data + catalog entry
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for code conventions and PR workflow.
 
 ## Pages
 

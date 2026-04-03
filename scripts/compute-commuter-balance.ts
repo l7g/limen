@@ -112,7 +112,7 @@ function main() {
   writeFileSync(OUTPUT_FILE, output, "utf-8");
 
   // Summary
-  const balances = lines.map((l) => parseInt(l.split(",")[5]));
+  const balances = lines.map((l) => parseInt(l.split(",")[6]));
   const attractors = balances.filter((b) => b > 0).length;
   const dormitories = balances.filter((b) => b < 0).length;
   const neutral = balances.filter((b) => b === 0).length;

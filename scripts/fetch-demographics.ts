@@ -144,13 +144,6 @@ async function main() {
     });
 
     const rows = parseSdmxCsv(csv);
-    // Keep only latest year per comune (take max TIME_PERIOD)
-    const latest = new Map<string, (typeof rows)[0][]>();
-    for (const r of rows) {
-      if (!isComuneCode(r.REF_AREA)) continue;
-      const k = `${r.REF_AREA}_${r.SEX || ""}_${r.AGE || ""}`;
-      if (!latest.has(r.REF_AREA)) latest.set(r.REF_AREA, []);
-    }
 
     // Filter to latest year only
     let maxYear = "0";

@@ -7,7 +7,10 @@ export interface DatasetMeta {
   sourceUrl: string;
   description: string;
   cadence: DatasetCadence;
+  /** Date the source last published this data (e.g. ISTAT reference date, ACI data year). Used for freshness calculation and display. */
   lastUpdated: string;
+  /** Date Limen last fetched/processed this data. Internal tracking — shown in admin and detail views. */
+  lastFetched?: string;
   nextExpectedUpdate?: string;
   expectedPublishMonth?: number;
   expiryWarningDays: number;

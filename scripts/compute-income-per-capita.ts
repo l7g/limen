@@ -120,7 +120,7 @@ function main() {
   writeFileSync(OUTPUT_FILE, output, "utf-8");
 
   // Summary stats
-  const perCapita = lines.map((l) => parseInt(l.split(",")[7]));
+  const perCapita = lines.map((l) => parseInt(l.split(",")[8]));
   const avg = Math.round(
     perCapita.reduce((a, b) => a + b, 0) / perCapita.length,
   );

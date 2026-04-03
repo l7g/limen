@@ -6,11 +6,7 @@ import {
   getDataset,
   getRelatedDatasets,
 } from "@/lib/datasets/catalog";
-import {
-  computeStatus,
-  daysSinceUpdate,
-  daysUntilUpdate,
-} from "@/lib/datasets/freshness";
+import { computeStatus, daysUntilUpdate } from "@/lib/datasets/freshness";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -85,7 +81,6 @@ export default async function DatasetDetailPage({
   if (!dataset) notFound();
 
   const status = computeStatus(dataset);
-  const age = daysSinceUpdate(dataset);
   const untilNext = daysUntilUpdate(dataset);
   const related = getRelatedDatasets(datasetId);
 
@@ -108,7 +103,26 @@ export default async function DatasetDetailPage({
       value: cadenceLabels[dataset.cadence] ?? dataset.cadence,
     },
     { label: "Aggiornamento", value: tierLabels[dataset.tier] },
-    { label: "Ultimo aggiornamento", value: `${age} giorni fa` },
+    {
+      label: "Dati riferiti a",
+      value: new Date(dataset.lastUpdated).toLocaleDateString("it-IT", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    },
+    ...(dataset.lastFetched
+      ? [
+          {
+            label: "Ultimo download",
+            value: new Date(dataset.lastFetched).toLocaleDateString("it-IT", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }),
+          },
+        ]
+      : []),
     ...(untilNext !== null
       ? [
           {

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#111827"/>
+  <!-- Subtle grid pattern -->
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#1f2937" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <!-- Icon -->
+  <path d="M176 140 V400 H352"
+        stroke="#00D9A3" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Text -->
+  <text x="420" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="white" letter-spacing="-1">Limen</text>
+  <text x="420" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#9ca3af">Dati aperti italiani, finalmente in un unico posto</text>
+  <!-- Stats bar -->
+  <text x="420" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#00D9A3">20 dataset</text>
+  <text x="600" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#6b7280">·</text>
+  <text x="630" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#00D9A3">7 indicatori derivati</text>
+  <text x="880" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#6b7280">·</text>
+  <text x="910" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#00D9A3">7.900 comuni</text>
+  <!-- URL -->
+  <text x="420" y="450" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#4b5563">limen.city</text>
+  <!-- Bottom accent line -->
+  <rect x="0" y="620" width="1200" height="10" fill="#00D9A3"/>
+</svg>

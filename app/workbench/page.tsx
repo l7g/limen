@@ -60,7 +60,9 @@ const PALETTE_OPTIONS: { key: PaletteKey; label: string }[] = [
 ];
 
 /**
- * Reads ?layer= param on mount to auto-add a dataset from catalog links.
+ * Reads ?layers= param on mount to auto-add datasets from catalog links.
+ * Supports comma-separated IDs: /workbench?layers=density,income
+ * Also supports legacy single ?layer= param.
  */
 function LayerParamSync() {
   const searchParams = useSearchParams();
@@ -68,12 +70,17 @@ function LayerParamSync() {
   const addDataset = useWorkbenchStore((s) => s.addDataset);
 
   useEffect(() => {
-    const layerParam = searchParams.get("layer");
-    if (!layerParam) return;
-    // Don't add if already present
-    if (datasets.some((d) => d.datasetId === layerParam)) return;
-    const ds = datasetFromIndicator(layerParam);
-    if (ds) addDataset(ds);
+    const raw = searchParams.get("layers") ?? searchParams.get("layer") ?? "";
+    if (!raw) return;
+    const ids = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    for (const id of ids) {
+      if (datasets.some((d) => d.datasetId === id)) continue;
+      const ds = datasetFromIndicator(id);
+      if (ds) addDataset(ds);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,18 +88,35 @@ function LayerParamSync() {
 }
 
 /** Catalog datasets that can be visualized (have joinField + CSV on known indicators). */
-const ADDABLE_DATASETS = INDICATORS.map((ind) => {
+const ADDABLE_CHOROPLETH = INDICATORS.map((ind) => {
   const cat = catalogDatasets.find(
     (d) => d.id === ind.id || d.filePath.includes(ind.csv.split("/").pop()!),
   );
   return {
     indicatorId: ind.id,
+    type: "choropleth" as const,
     label: ind.label,
     description: cat?.description ?? "",
     scale: ind.scale,
-    palette: INDICATOR_PALETTES[ind.id] ?? "teal",
+    palette: (INDICATOR_PALETTES[ind.id] ?? "teal") as PaletteKey,
   };
 });
+
+/** Point datasets (e.g. GTFS stops). */
+const ADDABLE_POINTS = [
+  {
+    indicatorId: "gtfs-sardegna",
+    type: "points" as const,
+    label: "Fermate TPL",
+    description:
+      "6.275 fermate del trasporto pubblico in Sardegna (ARST, CTM, ATP, ASPO, Trenitalia)",
+    coverageLabel: "Sardegna",
+    geojsonUrl: "/data/transit/all-stops.geojson",
+    palette: "teal" as PaletteKey,
+  },
+];
+
+const ADDABLE_DATASETS = [...ADDABLE_CHOROPLETH, ...ADDABLE_POINTS];
 
 export default function WorkbenchPage() {
   const wbDatasets = useWorkbenchStore((s) => s.datasets);
@@ -137,9 +161,27 @@ export default function WorkbenchPage() {
       setShowPicker(false);
       return;
     }
+    // Try choropleth indicator first
     const ds = datasetFromIndicator(indicatorId);
     if (ds) {
       addDataset(ds);
+      setShowPicker(false);
+      return;
+    }
+    // Try point dataset
+    const pt = ADDABLE_POINTS.find((p) => p.indicatorId === indicatorId);
+    if (pt) {
+      const instanceId = `pts-${indicatorId}`;
+      addDataset({
+        id: instanceId,
+        datasetId: indicatorId,
+        type: "points",
+        label: pt.label,
+        geojsonUrl: pt.geojsonUrl,
+        coverageLabel: pt.coverageLabel,
+        palette: pt.palette,
+        opacity: 0.8,
+      });
       setShowPicker(false);
     }
   }
@@ -407,7 +449,11 @@ export default function WorkbenchPage() {
                           {ds.label}
                         </span>
                         <span className="text-[9px] text-zinc-600 shrink-0">
-                          {ds.scale === "comunale" ? "COM" : "PROV"}
+                          {ds.type === "points"
+                            ? (ds.coverageLabel ?? "Punti")
+                            : ds.scale === "comunale"
+                              ? "COM"
+                              : "PROV"}
                         </span>
                         <button
                           type="button"
@@ -424,31 +470,33 @@ export default function WorkbenchPage() {
                       {/* Expanded config — only for active dataset */}
                       {isActive && (
                         <div className="px-2.5 pb-2.5 space-y-2">
-                          {/* Field selector */}
-                          {ds.numericFields.length > 1 && (
-                            <div>
-                              <label className="text-[10px] text-zinc-500 mb-0.5 block">
-                                Campo
-                              </label>
-                              <div className="relative">
-                                <select
-                                  value={ds.activeField}
-                                  onChange={(e) =>
-                                    setDatasetField(ds.id, e.target.value)
-                                  }
-                                  className="w-full appearance-none rounded bg-zinc-700 px-2 py-1 pr-6 text-[11px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50"
-                                >
-                                  {ds.numericFields.map((f) => (
-                                    <option key={f.key} value={f.key}>
-                                      {f.label}
-                                      {f.unit ? ` (${f.unit})` : ""}
-                                    </option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+                          {/* Field selector — choropleth only */}
+                          {ds.type === "choropleth" &&
+                            ds.numericFields &&
+                            ds.numericFields.length > 1 && (
+                              <div>
+                                <label className="text-[10px] text-zinc-500 mb-0.5 block">
+                                  Campo
+                                </label>
+                                <div className="relative">
+                                  <select
+                                    value={ds.activeField}
+                                    onChange={(e) =>
+                                      setDatasetField(ds.id, e.target.value)
+                                    }
+                                    className="w-full appearance-none rounded bg-zinc-700 px-2 py-1 pr-6 text-[11px] text-zinc-300 outline-none focus:ring-1 focus:ring-[#00D9A3]/50"
+                                  >
+                                    {ds.numericFields.map((f) => (
+                                      <option key={f.key} value={f.key}>
+                                        {f.label}
+                                        {f.unit ? ` (${f.unit})` : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500" />
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
                           {/* Palette selector */}
                           <div>
@@ -776,9 +824,13 @@ export default function WorkbenchPage() {
                           {item.label}
                         </p>
                         <p className="text-[10px] text-zinc-500">
-                          {item.scale === "comunale"
-                            ? "Comunale"
-                            : "Provinciale"}
+                          {item.type === "points"
+                            ? ((item as (typeof ADDABLE_POINTS)[number])
+                                .coverageLabel ?? "Punti")
+                            : (item as (typeof ADDABLE_CHOROPLETH)[number])
+                                  .scale === "comunale"
+                              ? "Comunale"
+                              : "Provinciale"}
                           {alreadyAdded && " · Già aggiunto"}
                         </p>
                       </div>

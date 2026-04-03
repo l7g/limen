@@ -76,11 +76,21 @@ export const useWorkbenchStore = create<WorkbenchState & WorkbenchActions>(
 
     // ── Dataset actions ────────────────────────────────────
     addDataset: (dataset) =>
-      set((state) => ({
-        datasets: [...state.datasets, dataset],
-        activeDatasetId:
-          state.datasets.length === 0 ? dataset.id : state.activeDatasetId,
-      })),
+      set((state) => {
+        // Prevent duplicates by datasetId
+        if (state.datasets.some((d) => d.datasetId === dataset.datasetId)) {
+          return {
+            activeDatasetId: state.datasets.find(
+              (d) => d.datasetId === dataset.datasetId,
+            )!.id,
+          };
+        }
+        return {
+          datasets: [...state.datasets, dataset],
+          activeDatasetId:
+            state.datasets.length === 0 ? dataset.id : state.activeDatasetId,
+        };
+      }),
 
     removeDataset: (id) =>
       set((state) => {

@@ -7,7 +7,10 @@ export interface DatasetMeta {
   sourceUrl: string;
   description: string;
   cadence: DatasetCadence;
+  /** Date the source last published this data (e.g. ISTAT reference date, ACI data year). Used for freshness calculation and display. */
   lastUpdated: string;
+  /** Date Limen last fetched/processed this data. Internal tracking — shown in admin and detail views. */
+  lastFetched?: string;
   nextExpectedUpdate?: string;
   expectedPublishMonth?: number;
   expiryWarningDays: number;
@@ -101,20 +104,26 @@ export interface WorkbenchDataset {
   /** Catalog dataset id. */
   datasetId: string;
   label: string;
-  /** CSV path relative to /data/ */
-  csvPath: string;
-  /** Column used to join CSV rows to GeoJSON boundaries. */
-  joinKey: string;
-  /** Boundary scale this dataset joins to. */
-  scale: "comunale" | "provinciale";
-  /** All detected numeric columns from the CSV. */
-  numericFields: { key: string; label: string; unit?: string }[];
-  /** Currently selected field for visualization. */
-  activeField: string;
+  /** Rendering type: choropleth fill on boundaries, or standalone GeoJSON points. */
+  type: "choropleth" | "points";
+  /** CSV path relative to /data/ — required for choropleth. */
+  csvPath?: string;
+  /** Column used to join CSV rows to GeoJSON boundaries — required for choropleth. */
+  joinKey?: string;
+  /** Boundary scale this dataset joins to — required for choropleth. */
+  scale?: "comunale" | "provinciale";
+  /** All detected numeric columns from the CSV — required for choropleth. */
+  numericFields?: { key: string; label: string; unit?: string }[];
+  /** Currently selected field for visualization — required for choropleth. */
+  activeField?: string;
   /** Color palette key. */
   palette: import("../workbench/choropleth").PaletteKey;
   /** Opacity 0–1. */
   opacity: number;
+  /** GeoJSON URL for point layers. */
+  geojsonUrl?: string;
+  /** Coverage label (e.g. "Sardegna") for point datasets with limited reach. */
+  coverageLabel?: string;
 }
 
 /** Workbench view mode. */

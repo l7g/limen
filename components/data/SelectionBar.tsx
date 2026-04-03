@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { X, Download, Loader2, Merge, Link2, Info } from "lucide-react";
+import Link from "next/link";
+import {
+  X,
+  Download,
+  Loader2,
+  Merge,
+  Link2,
+  Info,
+  ExternalLink,
+} from "lucide-react";
 import type { DatasetMeta } from "@/lib/datasets/types";
 import {
   loadDataset,
@@ -77,6 +86,15 @@ export default function SelectionBar({
   }, [selected]);
 
   const hasMerge = mergeGroups.length > 0;
+
+  /** Build workbench URL with indicators from selected datasets */
+  const workbenchUrl = useMemo(() => {
+    const indicatorIds = selected
+      .map((d) => d.workbenchIndicatorId)
+      .filter(Boolean);
+    if (indicatorIds.length === 0) return null;
+    return `/workbench?layers=${indicatorIds.join(",")}`;
+  }, [selected]);
 
   /** Download a single file by triggering a browser download */
   function triggerDownload(ds: DatasetMeta) {
@@ -276,6 +294,16 @@ export default function SelectionBar({
 
           {/* Right: action buttons */}
           <div className="flex shrink-0 items-center gap-2">
+            {workbenchUrl && (
+              <Link
+                href={workbenchUrl}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              >
+                <ExternalLink className="h-3 w-3" />
+                <span className="hidden sm:inline">Workbench</span>
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={handleDownloadAll}

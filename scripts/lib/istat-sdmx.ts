@@ -46,7 +46,7 @@ async function enforceRateLimit(): Promise<void> {
   lastRequestTime = Date.now();
 }
 
-const TIMEOUT_MS = 120_000; // 2 min per request (ISTAT is slow)
+const TIMEOUT_MS = 300_000; // 5 min per request (ISTAT is slow, especially for filtered queries)
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 30_000; // 30s between retries
 

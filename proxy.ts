@@ -1,9 +1,9 @@
-// middleware.ts
-// Metti questo file nella ROOT del tuo progetto Next.js (stessa cartella di package.json)
+// proxy.ts
+// Metti questo file nella ROOT del progetto (al posto di middleware.ts)
 
 import { NextRequest, NextResponse } from "next/server";
 
-export async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Ignora risorse statiche e API
@@ -15,22 +15,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Invia dati di tracciamento in background
-  const ip =
-    req.headers.get("cf-connecting-ip") ||
-    req.headers.get("x-forwarded-for")?.split(",")[0] ||
-    req.headers.get("x-real-ip") ||
-    "unknown";
-
-  const baseUrl = req.nextUrl.origin;
-
   // Fire-and-forget: non blocca il caricamento della pagina
+  const baseUrl = req.nextUrl.origin;
   fetch(`${baseUrl}/api/track`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      page: pathname,
-    }),
+    body: JSON.stringify({ page: pathname }),
   }).catch(() => {});
 
   return NextResponse.next();
